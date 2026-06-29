@@ -2539,31 +2539,41 @@
             toast('Signed out', 'success');
             setTimeout(showAuth, 350);
         }
+              /* ══ ADMIN PORTAL SSO ══ */
+async function launchAdminPortal() {
+    try {
+        // Refresh session first so tokens are fresh (avoids expired token issues)
+        let session = null;
+        try {
+            const { data: r } = await sb.auth.refreshSession();
+            if (r?.session) session = r.session;
+        } catch (_) {}
+        
+        if (!session) {
+            const { data, error } = await sb.auth.getSession();
+            if (error || !data?.session) throw new Error('No active session. Please sign in again.');
+            session = data.session;
+        }
+        
+        const { access_token, refresh_token } = session;
 
-        /* ══ ADMIN PORTAL SSO ══ */
-        async function launchAdminPortal() {
-            try {
-                // Refresh session first so tokens are fresh (avoids expired token issues)
-                let session = null;
-                try {
-                    const { data: r } = await sb.auth.refreshSession();
-                    if (r?.session) session = r.session;
-                } catch (_) {}
-                if (!session) {
-                    const { data, error } = await sb.auth.getSession();
-                    if (error || !data?.session) throw new Error('No active session. Please sign in again.');
-                    session = data.session;
-                }
-                const { access_token, refresh_token } = session;
-                // CRITICAL FIX: Do NOT encodeURIComponent — JWTs only use safe chars and
-                // encoding breaks setSession() on the library side (was reading garbled tokens)
-                const targetUrl = new URL(PORTAL_URL);
-                targetUrl.hash = `access_token=${access_token}&refresh_token=${refresh_token}&token_type=bearer&type=magiclink`;
-                toast('Opening Admin Panel — your session is being transferred…', 'success');
-                window.open(targetUrl.toString(), '_blank');
-            } catch (e) { toast('Could not open portal: ' + e.message, 'error'); }
+        // 🛡️ SAFETY GUARD: Ensure tokens actually exist before proceeding
+        if (!access_token || !refresh_token) {
+            throw new Error('Session tokens are invalid or missing.');
         }
 
+        // CRITICAL FIX: Do NOT encodeURIComponent — JWTs only use safe chars and
+        // encoding breaks setSession() on the library side (was reading garbled tokens)
+        const targetUrl = new URL(PORTAL_URL);
+        targetUrl.hash = `access_token=${access_token}&refresh_token=${refresh_token}&token_type=bearer&type=magiclink`;
+        
+        toast('Opening Admin Panel — your session is being transferred…', 'success');
+        window.open(targetUrl.toString(), '_blank');
+    } catch (e) { 
+        toast('Could not open portal: ' + e.message, 'error'); 
+    }
+}
+         
         /* ══ DATA ══ */
         async function loadAll() {
             setRefresh(true);
