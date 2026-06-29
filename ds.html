@@ -2778,53 +2778,52 @@
                 p.classList.toggle('selected', p.dataset.role === role);
             });
         }
-
         function renderUsers() {
-            $('users-count-lbl').textContent = `(${USERS_CACHE.length} accounts)`;
-            $('nb-users').textContent = USERS_CACHE.length;
+    $('users-count-lbl').textContent = `(${USERS_CACHE.length} accounts)`;
+    $('nb-users').textContent = USERS_CACHE.length;
 
-            const roleClass = { admin: 'b-role-admin', librarian: 'b-role-librarian', viewer: 'b-role-viewer' };
-            const roleIcon = { admin: '🔑', librarian: '📖', viewer: '👁' };
+    const roleClass = { admin: 'b-role-admin', librarian: 'b-role-librarian', viewer: 'b-role-viewer' };
+    const roleIcon = { admin: '🔑', librarian: '📖', viewer: '👁' };
 
-            // Ensure Password column exists in table header
-            const theadRow = document.querySelector('#users-tbl').closest('.tbl').querySelector('thead tr');
-            if (theadRow) {
-                theadRow.innerHTML = `<th>User</th><th>Role</th><th>Created</th><th>Password</th><th>Status</th><th>Actions</th>`;
-            }
+    // Ensure Password column exists in table header
+    const theadRow = document.querySelector('#users-tbl').closest('.tbl').querySelector('thead tr');
+    if (theadRow) {
+        theadRow.innerHTML = `<th>User</th><th>Role</th><th>Created</th><th>Password</th><th>Status</th><th>Actions</th>`;
+    }
 
-            $('users-tbl').innerHTML = USERS_CACHE.length ?
-                USERS_CACHE.map(u => {
-                    const rc = roleClass[u.role] || 'b-neutral';
-                    const ri = roleIcon[u.role] || '?';
-                    const active = u.is_active !== false;
-                    const createdAt = u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB', { day: '2-digit',
-                        month: 'short', year: 'numeric' }) : '—';
-                    const deactLabel = active ? 'Deactivate' : 'Re-activate';
-                    const deactIcon = active ? 'ti-user-off' : 'ti-user-check';
-                    return `<tr>
-                        <td>
-                            <div style="font-weight:600;">${u.full_name || '—'}</div>
-                            <div style="font-size:11px;color:var(--text2);">${u.email || '—'}</div>
-                        </td>
-                        <td><span class="badge ${rc}">${ri} ${(u.role||'viewer').charAt(0).toUpperCase()+(u.role||'viewer').slice(1)}</span></td>
-                        <td style="font-size:12px;color:var(--text2);">${createdAt}</td>
-                        <td style="font-size:12px;font-family:monospace;color:var(--text3);">${u.password || '—'}</td>
-                        <td>${active ? '<span class="badge b-success"><i class="ti ti-check"></i> Active</span>' : '<span class="badge b-danger"><i class="ti ti-x"></i> Inactive</span>'}</td>
-                        <td>
-                            <div style="display:flex;gap:5px;flex-wrap:wrap;">
-                                <button class="um-action-btn edit" onclick="editUserRole('${u.id}','${u.role}')"><i class="ti ti-pencil"></i> Edit</button>
-                                <button class="um-action-btn del" onclick="deactivateUser('${u.id}')"><i class="ti ti-${deactIcon}"></i> ${deactLabel}</button>
-                                <button class="um-action-btn del" onclick="deleteUser('${u.id}')" style="border-color:#fecaca;color:#dc2626;background:#fee2e2;"><i class="ti ti-trash"></i> Delete</button>
-                            </div>
-                        </td>
-                    </tr>`;
-                }).join('') :
-                `<tr><td colspan="6" class="tbl-empty">
-                    No users yet. Click <strong>"Create New User"</strong> to add the first librarian or viewer account.<br>
-                    <span style="font-size:11px;color:var(--text3);margin-top:6px;display:block;">Note: Make sure the <code>app_users</code> table exists in your Supabase project.</span>
-                </td></tr>`;
-        }
-
+    $('users-tbl').innerHTML = USERS_CACHE.length ?
+        USERS_CACHE.map(u => {
+            const rc = roleClass[u.role] || 'b-neutral';
+            const ri = roleIcon[u.role] || '?';
+            const active = u.is_active !== false;
+            const createdAt = u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB', { day: '2-digit',
+                month: 'short', year: 'numeric' }) : '—';
+            const deactLabel = active ? 'Deactivate' : 'Re-activate';
+            const deactIcon = active ? 'ti-user-off' : 'ti-user-check';
+            return `<tr>
+                <td>
+                    <div style="font-weight:600;">${u.full_name || '—'}</div>
+                    <div style="font-size:11px;color:var(--text2);">${u.email || '—'}</div>
+                </td>
+                <td><span class="badge ${rc}">${ri} ${(u.role||'viewer').charAt(0).toUpperCase()+(u.role||'viewer').slice(1)}</span></td>
+                <td style="font-size:12px;color:var(--text2);">${createdAt}</td>
+                <td style="font-size:12px;font-family:monospace;color:var(--text3);">${u.password || '—'}</td>
+                <td>${active ? '<span class="badge b-success"><i class="ti ti-check"></i> Active</span>' : '<span class="badge b-danger"><i class="ti ti-x"></i> Inactive</span>'}</td>
+                <td>
+                    <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                        <button class="um-action-btn edit" onclick="editUserRole(${u.id},'${u.role}')"><i class="ti ti-pencil"></i> Edit</button>
+                        <button class="um-action-btn del" onclick="deactivateUser(${u.id})"><i class="ti ti-${deactIcon}"></i> ${deactLabel}</button>
+                        <button class="um-action-btn del" onclick="deleteUser(${u.id})" style="border-color:#fecaca;color:#dc2626;background:#fee2e2;"><i class="ti ti-trash"></i> Delete</button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('') :
+        `<tr><td colspan="6" class="tbl-empty">
+            No users yet. Click <strong>"Create New User"</strong> to add the first librarian or viewer account.<br>
+            <span style="font-size:11px;color:var(--text3);margin-top:6px;display:block;">Note: Make sure the <code>app_users</code> table exists in your Supabase project.</span>
+        </td></tr>`;
+}
+         
         /* ══ ACTIVITY LOGGING ══ */
         // Centralized Super-Admin no-trace guard: every call site in this file routes through here,
         // so a Super Admin's actions (including their own Login event) never produce activity_logs rows
