@@ -2722,7 +2722,7 @@
         document.getElementById('confirmCancelBtn').onclick = () => Confirm.cancel();
         document.getElementById('confirmOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) Confirm.cancel(); });
 
-                /* ═══════════════════════════════════════════════════
+                        /* ═══════════════════════════════════════════════════
            AUTH — Two paths: Staff (School Code) + Admin SSO
         ═══════════════════════════════════════════════════ */
         const Auth = {
@@ -2736,7 +2736,6 @@
                 document.getElementById('tabSSO').style.color = isStaff ? 'var(--ink-muted)' : '#fff';
             },
 
-            // Path B: Staff / Librarian / Viewer — School Code + Password via RPC
             async loginStaff() {
                 const schoolCode = document.getElementById('loginSchoolCode').value.trim();
                 const password = document.getElementById('loginPassword').value;
@@ -2795,7 +2794,6 @@
                 }
             },
 
-            // Path A: Org Admin — SSO triggered manually if tokens weren't in URL on load
             triggerSSO() {
                 const errorEl = document.getElementById('authErrorSSO');
                 errorEl.classList.remove('visible');
@@ -2839,7 +2837,7 @@
                 document.getElementById('authError').classList.remove('visible');
                 document.getElementById('authSchoolName').textContent = 'LibraryOS';
                 document.title = 'Library Management System';
-                Auth.switchTab('staff');
+                this.switchTab('staff');
             }
         };
         document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') Auth.loginStaff(); });
