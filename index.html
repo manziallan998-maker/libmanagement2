@@ -2169,54 +2169,64 @@
             }
         }
 
-        /* ─── SSO Auto‑Login (Org Admin path — from Monitor Hub) ─── */
+                /* ─── SSO Auto‑Login (Org Admin path — from Monitor Hub) ─── */
         async function handleSSO() {
+            console.log('🔍 SSO Step 1: Checking window.location.hash...');
             const hash = window.location.hash;
-            if (!hash) return false;
+            if (!hash) {
+                console.log('❌ SSO Step 1 Failed: No hash found in URL.');
+                return false;
+            }
 
             const params = new URLSearchParams(hash.substring(1));
             const access_token = params.get('access_token');
             const refresh_token = params.get('refresh_token');
 
-            if (!access_token || !refresh_token) return false;
+            if (!access_token || !refresh_token) {
+                console.log('❌ SSO Step 1 Failed: Missing access_token or refresh_token in hash.');
+                return false;
+            }
 
-            // Scrub the token from the address bar immediately — never leave it
-            // sitting in the URL while we do async work, and never rely on a
-            // page reload to "clean up" later (that's what was stripping it
-            // and looking like a silent failure).
+            console.log('✅ SSO Step 2: Tokens found. Scrubbing URL hash now.');
+            // Scrub the token from the address bar immediately
             window.history.replaceState({}, document.title, window.location.pathname);
 
             try {
+                console.log('⏳ SSO Step 3: Attempting Supabase setSession...');
                 const { data: { session }, error: sessionError } = await _sb.auth.setSession({
                     access_token,
                     refresh_token
                 });
                 if (sessionError) throw sessionError;
                 if (!session) throw new Error('No session returned from setSession');
+                console.log('✅ SSO Step 3: setSession successful!');
 
+                console.log('⏳ SSO Step 4: Fetching Auth User...');
                 const { data: { user: authUser }, error: userError } = await _sb.auth.getUser();
                 if (userError) throw userError;
                 if (!authUser) throw new Error('No authenticated user');
+                console.log('✅ SSO Step 4: Auth User found. User ID:', authUser.id);
 
-                // Look up in admins table — never auto-create.
-                // Plain select (no embedded "schools(...)" join — that join
-                // depends on Supabase's FK schema cache and can silently
-                // return null / error and abort the whole login).
+                console.log('⏳ SSO Step 5: Checking `admins` table for this user...');
                 const { data: adminRow, error: adminError } = await _sb
                     .from('admins')
                     .select('*')
                     .eq('id', authUser.id)
                     .maybeSingle();
 
-                if (adminError) throw adminError;
+                if (adminError) {
+                    console.error('❌ SSO Step 5 Failed: Admin lookup error.', adminError);
+                    throw adminError;
+                }
 
                 if (!adminRow) {
+                    console.error('❌ SSO Step 5 Failed: User found in Auth, but NOT in the `admins` table.');
                     Toast.show('Not authorized for this Library System.', 'error');
                     return false;
                 }
+                console.log('✅ SSO Step 5: Admin row found! Role:', adminRow.role);
 
-                // Fetch the school name separately. This is cosmetic only —
-                // it must NEVER be able to block or crash the login.
+                // Fetch the school name
                 let schoolName = adminRow.school_name || 'School';
                 try {
                     if (adminRow.school_id) {
@@ -2227,10 +2237,9 @@
                             .maybeSingle();
                         if (schoolRow?.name) schoolName = schoolRow.name;
                     }
-                } catch (schoolErr) {
-                    console.warn('Could not fetch school name (non-blocking):', schoolErr);
-                }
+                } catch (schoolErr) { console.warn('Non-blocking: Could not fetch school name.', schoolErr); }
 
+                console.log('✅ SSO Step 6: Setting currentUser object...');
                 currentUser = {
                     id: adminRow.id,
                     email: adminRow.email || authUser.email,
@@ -2241,24 +2250,25 @@
                     identityType: 'admin'
                 };
 
-                // Branding is cosmetic — never let a DOM hiccup here abort login.
-                try { _applySchoolBranding(currentUser.school_name); }
-                catch (brandErr) { console.warn('Branding skipped (non-blocking):', brandErr); }
-
-                // Clear stale localStorage activity cache so old logs from other sessions never show
+                console.log('✅ SSO Step 7: Setting branding and clearing stale cache...');
+                try { _applySchoolBranding(currentUser.school_name); } catch (brandErr) { console.warn(brandErr); }
                 localStorage.removeItem('lib_activity');
+
+                console.log('✅ SSO Step 8: Showing App Shell...');
                 showApp();
                 setTimeout(() => updateSidebarUser(), 100);
                 loadAllData();
-                // Activity logging is best-effort — don't let it block the login.
+                
+                // Activity logging is best-effort
                 DB.addActivity('Login', 'Admin ' + currentUser.full_name + ' logged in via SSO')
-                    .catch(e => console.warn('Activity log failed (non-blocking):', e));
+                    .catch(e => console.warn('Activity log failed:', e));
                 Toast.show('Welcome, ' + currentUser.full_name + '!', 'success');
 
+                console.log('🎉 SSO COMPLETE!');
                 return true;
 
             } catch (e) {
-                console.error('SSO error:', e);
+                console.error('🔥 SSO CATCH BLOCK TRIGGERED! Error:', e);
                 Toast.show('SSO login failed: ' + (e.message || 'Unknown error'), 'error');
                 return false;
             }
