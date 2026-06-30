@@ -2902,25 +2902,26 @@
                     settings: () => Settings.render(),
                 };
                 if (refreshers[section]) refreshers[section]();
-                // Post identity to bulk import iframe when navigating there
+                            // Post identity to bulk import iframe when navigating there
                 if (section === 'bulkimport') {
-                    setTimeout(() => {
+                    setTimeout(async () => { // 👈 Added 'async'
                         const iframe = document.getElementById('bulkImportFrame');
                         if (iframe && currentUser) {
+                            // 🛡️ Fetch the live Supabase JWT for the Admin
+                            const { data: { session } } = await _sb.auth.getSession();
+                            
                             iframe.contentWindow.postMessage({
                                 type: 'BILLAN_IDENTITY',
                                 identityType: currentUser.identityType,
                                 schoolCode: currentUser._schoolCode || null,
                                 password: currentUser._password || null,
                                 schoolId: currentUser.school_id,
-                                schoolName: currentUser.school_name
+                                schoolName: currentUser.school_name,
+                                access_token: session?.access_token || null // <--- Added this!
                             }, '*');
                         }
                     }, 500);
                 }
-            }
-        };
-
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', () => Nav.go(item.dataset.section));
         });
