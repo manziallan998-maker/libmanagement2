@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 🛡️ NUCLEAR CACHE BUSTING FOR THE PORTAL ITSELF -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    
+    <title>BILLAN · Launcher</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0c1e3e;
+            --gold: #c9a227;
+            --gold2: #e6bb44;
+            --rust: #c2410c;
+            --text: #fafaf9;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            background-image: radial-gradient(ellipse at 15% 50%, rgba(201, 162, 39, .1) 0%, transparent 60%);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 20px;
+        }
+        .portal-box {
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+            padding: 40px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(201, 162, 39, .15);
+            border-radius: 20px;
+            box-shadow: 0 32px 80px rgba(0,0,0,.6);
+        }
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.2rem;
+            margin-bottom: 6px;
+            background: linear-gradient(90deg, #fff, var(--gold2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        p.sub {
+            color: rgba(255,255,255,.5);
+            margin-bottom: 28px;
+            letter-spacing: .5px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+        .portal-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 15px;
+            background: rgba(255,255,255,.04);
+            border: 1px solid rgba(255,255,255,.06);
+            border-radius: 12px;
+            color: #fff;
+            text-decoration: none;
+            transition: all 0.25s ease;
+            font-weight: 600;
+        }
+        .portal-btn:hover {
+            transform: translateY(-4px);
+            background: var(--rust);
+            border-color: var(--rust);
+            box-shadow: 0 8px 24px rgba(194,65,12,.4);
+        }
+        .portal-btn span {
+            font-size: 12px;
+            font-weight: 400;
+            color: rgba(255,255,255,.4);
+            margin-top: 4px;
+        }
+        .portal-btn:hover span {
+            color: #fff;
+        }
+        .note {
+            margin-top: 30px;
+            font-size: 13px;
+            color: rgba(255,255,255,.3);
+            background: rgba(255,255,255,.03);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,.04);
+        }
+        .note code { color: var(--gold2); background: rgba(0,0,0,.3); padding: 2px 6px; border-radius: 4px; }
+        @media (max-width: 500px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="portal-box">
+        <h1>🚀 BILLAN LAUNCHER</h1>
+        <p class="sub">Zero-Cache Entry Point for the Ecosystem</p>
+
+        <div class="grid">
+            <!-- 🛡️ CACHE BUSTING INJECTION: -->
+            <script>
+                // This ensures the link below generates: "?t=1700000000" every single click
+                const t = Date.now(); 
+                document.write(`
+                    <a class="portal-btn" href="billan-monitor.html?t=${t}" target="_blank">
+                        🛡️ System Monitor
+                        <span>Super Admin Panel</span>
+                    </a>
+                    <a class="portal-btn" href="ds.html?t=${t}" target="_blank">
+                        📊 Monitor Hub
+                        <span>Org Admin Dashboard</span>
+                    </a>
+                    <a class="portal-btn" href="index.html?t=${t}" target="_blank">
+                        📚 Library System
+                        <span>Staff & Admin Operations</span>
+                    </a>
+                    <a class="portal-btn" href="file-detector-ai.html?t=${t}" target="_blank">
+                        🤖 AI Import Engine
+                        <span>Universal Data Importer</span>
+                    </a>
+                `);
+            </script>
+        </div>
+
+        <div class="note">
+            ⚡ Every time you reload this page and click a link, <code>?t=${new Date().toISOString()}</code> 
+            is appended to the URL. This <strong>forces the browser to download the absolute latest version</strong> 
+            of that file from GitHub, bypassing all local and proxy caches. 
+            <br><br>
+            <span style="color:var(--gold2);font-weight:700;">✅ Use this to instantly fix "stuck" login issues & iframe glitches!</span>
+        </div>
+    </div>
+</body>
+</html>
