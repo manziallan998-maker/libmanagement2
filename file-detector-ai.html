@@ -578,10 +578,11 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
    via postMessage. Until IDENTITY is set, the upload zone stays locked.
 ══════════════════════════════════════════════════════════════════ */
 let IDENTITY = null; // { identityType:'admin'|'staff', schoolCode, password, schoolId, schoolName }
-
+let ACCESS_TOKEN = null;
 window.addEventListener('message', (event) => {
   if (event.data?.type === 'BILLAN_IDENTITY') {
     IDENTITY = event.data;
+    ACCESS_TOKEN = event.data.access_token || null;
     onIdentityReceived();
   }
 });
@@ -617,13 +618,20 @@ const SB_URL  = 'https://nzauptxxvccnpvezzdyu.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im56YXVwdHh4dmNjbnB2ZXp6ZHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3Mjg1ODcsImV4cCI6MjA5ODMwNDU4N30.M7XLTeOIH8o7XV_J1Yrr5V6uQ4WjaT3mf8by5HsPT_g'; // role:"anon"
 
 function sbHeaders(extra = {}) {
+  // 🔥 CRITICAL FIX: Use the real Admin JWT if available, otherwise fallback to ANON key
+  let authHeader = 'Bearer ' + SB_ANON;
+  if (IDENTITY?.identityType === 'admin' && ACCESS_TOKEN) {
+      authHeader = 'Bearer ' + ACCESS_TOKEN;
+  }
+  
   return {
     'Content-Type'  : 'application/json',
     'apikey'        : SB_ANON,
-    'Authorization' : 'Bearer ' + SB_ANON,
+    'Authorization' : authHeader,
     ...extra
   };
 }
+
 async function sbRpc(fn, params) {
   const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {
     method: 'POST', headers: sbHeaders(), body: JSON.stringify(params)
@@ -639,7 +647,6 @@ async function sbRpc(fn, params) {
   const ct = r.headers.get('content-type')||'';
   return ct.includes('json') ? r.json() : null;
 }
-
 /* ──────────────────────────────────────────────────────────────────
    IDENTITY-AWARE RPC DISPATCH
    Staff path: passes p_school_code + p_password for every RPC.
