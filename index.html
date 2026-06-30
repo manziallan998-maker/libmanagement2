@@ -2169,64 +2169,45 @@
             }
         }
 
-                /* ─── SSO Auto‑Login (Org Admin path — from Monitor Hub) ─── */
+                        /* ─── SSO Auto‑Login (Org Admin path — from Monitor Hub) ─── */
         async function handleSSO() {
-            console.log('🔍 SSO Step 1: Checking window.location.hash...');
             const hash = window.location.hash;
-            if (!hash) {
-                console.log('❌ SSO Step 1 Failed: No hash found in URL.');
-                return false;
-            }
+            if (!hash) return false;
 
             const params = new URLSearchParams(hash.substring(1));
             const access_token = params.get('access_token');
             const refresh_token = params.get('refresh_token');
 
-            if (!access_token || !refresh_token) {
-                console.log('❌ SSO Step 1 Failed: Missing access_token or refresh_token in hash.');
-                return false;
-            }
-
-            console.log('✅ SSO Step 2: Tokens found. Scrubbing URL hash now.');
-            // Scrub the token from the address bar immediately
-            window.history.replaceState({}, document.title, window.location.pathname);
+            if (!access_token || !refresh_token) return false;
 
             try {
-                console.log('⏳ SSO Step 3: Attempting Supabase setSession...');
+                // 1. Try to set the session (do NOT scrub the URL yet!)
                 const { data: { session }, error: sessionError } = await _sb.auth.setSession({
                     access_token,
                     refresh_token
                 });
                 if (sessionError) throw sessionError;
                 if (!session) throw new Error('No session returned from setSession');
-                console.log('✅ SSO Step 3: setSession successful!');
 
-                console.log('⏳ SSO Step 4: Fetching Auth User...');
+                // 2. If this succeeded, it is safe to scrub the URL now
+                window.history.replaceState({}, document.title, window.location.pathname);
+
                 const { data: { user: authUser }, error: userError } = await _sb.auth.getUser();
                 if (userError) throw userError;
                 if (!authUser) throw new Error('No authenticated user');
-                console.log('✅ SSO Step 4: Auth User found. User ID:', authUser.id);
 
-                console.log('⏳ SSO Step 5: Checking `admins` table for this user...');
                 const { data: adminRow, error: adminError } = await _sb
                     .from('admins')
                     .select('*')
                     .eq('id', authUser.id)
                     .maybeSingle();
 
-                if (adminError) {
-                    console.error('❌ SSO Step 5 Failed: Admin lookup error.', adminError);
-                    throw adminError;
-                }
-
+                if (adminError) throw adminError;
                 if (!adminRow) {
-                    console.error('❌ SSO Step 5 Failed: User found in Auth, but NOT in the `admins` table.');
                     Toast.show('Not authorized for this Library System.', 'error');
                     return false;
                 }
-                console.log('✅ SSO Step 5: Admin row found! Role:', adminRow.role);
 
-                // Fetch the school name
                 let schoolName = adminRow.school_name || 'School';
                 try {
                     if (adminRow.school_id) {
@@ -2237,9 +2218,8 @@
                             .maybeSingle();
                         if (schoolRow?.name) schoolName = schoolRow.name;
                     }
-                } catch (schoolErr) { console.warn('Non-blocking: Could not fetch school name.', schoolErr); }
+                } catch (schoolErr) { console.warn('Could not fetch school name (non-blocking):', schoolErr); }
 
-                console.log('✅ SSO Step 6: Setting currentUser object...');
                 currentUser = {
                     id: adminRow.id,
                     email: adminRow.email || authUser.email,
@@ -2250,25 +2230,20 @@
                     identityType: 'admin'
                 };
 
-                console.log('✅ SSO Step 7: Setting branding and clearing stale cache...');
-                try { _applySchoolBranding(currentUser.school_name); } catch (brandErr) { console.warn(brandErr); }
-                localStorage.removeItem('lib_activity');
+                try { _applySchoolBranding(currentUser.school_name); } catch (brandErr) { console.warn('Branding skipped:', brandErr); }
 
-                console.log('✅ SSO Step 8: Showing App Shell...');
+                localStorage.removeItem('lib_activity');
                 showApp();
                 setTimeout(() => updateSidebarUser(), 100);
                 loadAllData();
-                
-                // Activity logging is best-effort
                 DB.addActivity('Login', 'Admin ' + currentUser.full_name + ' logged in via SSO')
                     .catch(e => console.warn('Activity log failed:', e));
                 Toast.show('Welcome, ' + currentUser.full_name + '!', 'success');
 
-                console.log('🎉 SSO COMPLETE!');
                 return true;
 
             } catch (e) {
-                console.error('🔥 SSO CATCH BLOCK TRIGGERED! Error:', e);
+                console.error('SSO error:', e);
                 Toast.show('SSO login failed: ' + (e.message || 'Unknown error'), 'error');
                 return false;
             }
@@ -2747,7 +2722,7 @@
         document.getElementById('confirmCancelBtn').onclick = () => Confirm.cancel();
         document.getElementById('confirmOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) Confirm.cancel(); });
 
-        /* ═══════════════════════════════════════════════════
+                /* ═══════════════════════════════════════════════════
            AUTH — Two paths: Staff (School Code) + Admin SSO
         ═══════════════════════════════════════════════════ */
         const Auth = {
@@ -2803,7 +2778,6 @@
 
                     _applySchoolBranding(currentUser.school_name);
                     document.getElementById('loginPassword').value = '';
-                    // Clear old localStorage activity cache on every login
                     localStorage.removeItem('lib_activity');
                     showApp();
                     setTimeout(() => updateSidebarUser(), 100);
@@ -2833,7 +2807,6 @@
                 btnText.textContent = 'Checking tokens…';
                 spinner.style.display = 'inline-block';
 
-                // Try reading hash again in case page was navigated to with tokens
                 handleSSO().then(success => {
                     if (!success) {
                         errorEl.textContent = 'No SSO tokens found. Please return to Monitor Hub and click the Admin Panel link again.';
@@ -2850,7 +2823,6 @@
                     await DB.addActivity('Logout', 'User ' + (currentUser.full_name || currentUser.email) + ' logged out');
                 }
 
-                // Sign out of Supabase session if admin
                 if (currentUser?.identityType === 'admin') {
                     try { await _sb.auth.signOut(); } catch (e) { console.warn('SignOut error:', e); }
                 }
@@ -2858,7 +2830,6 @@
                 currentUser = null;
                 document.getElementById('appShell').classList.add('hidden');
                 document.getElementById('authScreen').classList.remove('hidden');
-                // Reset login form
                 document.getElementById('loginSchoolCode').value = '';
                 document.getElementById('loginPassword').value = '';
                 const btn = document.getElementById('loginBtn');
@@ -2866,13 +2837,11 @@
                 document.getElementById('loginBtnText').textContent = 'Sign In';
                 document.getElementById('loginSpinner').style.display = 'none';
                 document.getElementById('authError').classList.remove('visible');
-                // Reset branding to neutral
                 document.getElementById('authSchoolName').textContent = 'LibraryOS';
                 document.title = 'Library Management System';
                 Auth.switchTab('staff');
             }
         };
-
         document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') Auth.loginStaff(); });
         document.getElementById('loginSchoolCode').addEventListener('keydown', e => { if (e.key === 'Enter') Auth.loginStaff(); });
 
