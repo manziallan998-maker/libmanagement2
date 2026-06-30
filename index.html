@@ -2976,17 +2976,38 @@
                         }).join('');
                     }
 
-                    // Fetch activity from Supabase activity_logs (scoped to this school)
+                     // Fetch activity from Supabase activity_logs (scoped to this school)
                     // Falls back to localStorage cache if DB fetch fails
                     const feed = document.getElementById('activityFeed');
                     feed.innerHTML = `<div style="padding:22px 0;color:var(--ink-muted);font-size:.82rem">Loading activity…</div>`;
                     try {
-                        const { data: dbLogs, error: logErr } = await _sb
-                            .from('activity_logs')
-                            .select('*')
-                            .eq('school_id', currentUser.school_id)
-                            .order('created_at', { ascending: false })
-                            .limit(15);
+                        let dbLogs = [];
+                        let logErr = null;
+
+                        // 🛡️ SECURE SPLIT: Admin uses direct REST, Staff uses secured RPC
+                        if (Data.isAdmin()) {
+                            // Admin path: Direct REST API (RLS policies guard this perfectly)
+                            const result = await _sb
+                                .from('activity_logs')
+                                .select('*')
+                                .eq('school_id', currentUser.school_id)
+                                .order('created_at', { ascending: false })
+                                .limit(15);
+                            if (!result.error) dbLogs = result.data || [];
+                            else logErr = result.error;
+                        } else {
+                            // Staff path (Librarians/Viewers): use the validated RPC
+                            try {
+                                const result = await _sb.rpc('staff_get_activity_logs', {
+                                    p_school_code: Data._sc(),
+                                    p_password: Data._pw()
+                                });
+                                if (!result.error) dbLogs = result.data || [];
+                                else logErr = result.error;
+                            } catch (e) {
+                                logErr = e;
+                            }
+                        }
 
                         const typeMap = {
                             'Login':'login','Logout':'logout','Add Book':'add','Update Book':'add',
@@ -3026,7 +3047,6 @@
                 }
             }
         };
-
         /* ═══════════════════════════════════════════════════
            BOOKS MODULE (unchanged, updated addActivity calls)
         ═══════════════════════════════════════════════════ */
