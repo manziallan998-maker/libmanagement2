@@ -1,0 +1,2116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BILLAN AI — Universal Data Import Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0a0a0a;--bg2:#111111;--bg3:#1a1a1a;--bg4:#222222;--bg5:#2a2a2a;
+  --orange:#ff6b00;--orange2:#ff8c38;--orange3:rgba(255,107,0,0.13);--orange4:rgba(255,107,0,0.06);
+  --amber:#f59e0b;--amber3:rgba(245,158,11,0.13);
+  --red:#ef4444;--red3:rgba(239,68,68,0.13);
+  --green:#22c55e;--green3:rgba(34,197,94,0.13);
+  --blue:#3b82f6;--blue3:rgba(59,130,246,0.13);
+  --purple:#a855f7;--purple3:rgba(168,85,247,0.13);
+  --white:#ffffff;--text1:#ffffff;--text2:#a0a0a0;--text3:#555555;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.12);--border3:rgba(255,107,0,0.3);
+  --sans:'Space Grotesk',sans-serif;--mono:'JetBrains Mono',monospace;--display:'Playfair Display',serif;
+  --r:8px;--rl:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text1);min-height:100vh;line-height:1.6;overflow-x:hidden;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:var(--bg2);}
+::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:2px;}
+::-webkit-scrollbar-thumb:hover{background:var(--orange);}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:0.4;}
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:60px;border-bottom:1px solid var(--border);background:var(--bg2);position:sticky;top:0;z-index:200;backdrop-filter:blur(12px);}
+.logo{display:flex;align-items:center;gap:12px;}
+.logo-mark{width:34px;height:34px;border-radius:8px;background:var(--orange);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#000;letter-spacing:-1px;box-shadow:0 0 20px rgba(255,107,0,0.4);}
+.logo-name{font-family:var(--display);font-size:1.15rem;background:linear-gradient(90deg,#fff 40%,var(--orange2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.logo-tag{font-size:10px;color:var(--orange);letter-spacing:0.15em;font-weight:600;text-transform:uppercase;margin-left:2px;vertical-align:super;}
+.hdr-center{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text3);font-family:var(--mono);}
+.status-pill{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border2);padding:4px 12px;border-radius:20px;font-size:12px;color:var(--text2);transition:all 0.3s;}
+.status-pill.active{border-color:var(--orange);color:var(--orange);}
+.status-pill.done{border-color:var(--green);color:var(--green);}
+.status-pulse{width:7px;height:7px;border-radius:50%;background:currentColor;animation:sp 1.8s ease infinite;}
+@keyframes sp{0%,100%{opacity:1}50%{opacity:0.3}}
+.hdr-actions{display:flex;align-items:center;gap:8px;}
+.hdr-btn{background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:5px 14px;border-radius:6px;font-family:var(--sans);font-size:12px;cursor:pointer;transition:all 0.2s;font-weight:500;}
+.hdr-btn:hover{border-color:var(--orange);color:var(--orange);}
+.db-badge{display:flex;align-items:center;gap:6px;background:var(--green3);border:1px solid var(--green);color:var(--green);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;}
+.conn-badge{display:flex;align-items:center;gap:6px;background:var(--blue3);border:1px solid var(--blue);color:var(--blue);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;}
+.conn-badge:hover{background:rgba(59,130,246,0.2);}
+.conn-badge.connected{background:var(--green3);border-color:var(--green);color:var(--green);}
+.conn-badge.error{background:var(--red3);border-color:var(--red);color:var(--red);}
+.main{max-width:1280px;margin:0 auto;padding:2rem;position:relative;z-index:1;}
+.upload-hero{border:1.5px dashed var(--border2);border-radius:var(--rl);padding:4rem 2rem 3rem;text-align:center;cursor:pointer;transition:all 0.35s cubic-bezier(.4,0,.2,1);background:var(--bg2);position:relative;overflow:hidden;}
+.upload-hero::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 100%,rgba(255,107,0,0.08) 0%,transparent 70%);transition:opacity 0.35s;opacity:0;}
+.upload-hero:hover,.upload-hero.drag{border-color:var(--orange);background:var(--bg3);}
+.upload-hero:hover::after,.upload-hero.drag::after{opacity:1;}
+.upload-hero.drag{transform:scale(1.005);}
+.upload-orb{width:80px;height:80px;border-radius:50%;background:var(--orange3);border:2px solid var(--orange);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 1.5rem;box-shadow:0 0 40px rgba(255,107,0,0.2);animation:orb 3s ease infinite;position:relative;z-index:1;}
+@keyframes orb{0%,100%{box-shadow:0 0 40px rgba(255,107,0,0.2)}50%{box-shadow:0 0 60px rgba(255,107,0,0.35)}}
+.upload-title{font-family:var(--display);font-size:2.2rem;background:linear-gradient(135deg,#fff 50%,var(--orange2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:0.5rem;position:relative;z-index:1;line-height:1.2;}
+.upload-sub{color:var(--text2);margin-bottom:1.5rem;position:relative;z-index:1;font-size:15px;}
+.format-grid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;position:relative;z-index:1;margin-bottom:1.5rem;}
+.fmt-badge{background:var(--bg4);border:1px solid var(--border2);color:var(--text2);padding:5px 12px;border-radius:5px;font-family:var(--mono);font-size:11px;letter-spacing:0.05em;transition:all 0.2s;}
+.fmt-badge.hi{background:var(--orange3);border-color:var(--orange);color:var(--orange);font-weight:600;}
+.fmt-badge:hover{border-color:var(--orange);color:var(--orange);}
+.browse-btn{display:inline-flex;align-items:center;gap:9px;background:var(--orange);color:#000;padding:11px 28px;border-radius:8px;font-family:var(--sans);font-weight:700;font-size:14px;cursor:pointer;border:none;transition:all 0.2s;position:relative;z-index:1;letter-spacing:0.02em;box-shadow:0 4px 24px rgba(255,107,0,0.35);}
+.browse-btn:hover{background:var(--orange2);transform:translateY(-2px);box-shadow:0 8px 32px rgba(255,107,0,0.45);}
+#fileInput{display:none;}
+.bot-panel{display:none;}
+.bot-panel.on{display:block;animation:fadeUp 0.4s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.bot-head{display:flex;align-items:center;gap:14px;background:var(--bg2);border:1px solid var(--border2);border-bottom:none;border-radius:var(--rl) var(--rl) 0 0;padding:14px 18px;}
+.bot-ava{width:42px;height:42px;border-radius:50%;background:var(--orange3);border:2px solid var(--orange);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;box-shadow:0 0 20px rgba(255,107,0,0.25);}
+.bot-meta .name{font-weight:700;font-size:15px;letter-spacing:0.01em;}
+.bot-meta .ver{font-size:10px;font-family:var(--mono);color:var(--orange);letter-spacing:0.12em;text-transform:uppercase;}
+.bot-stat{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text3);font-family:var(--mono);}
+.chat-win{background:var(--bg2);border:1px solid var(--border2);border-radius:0 0 var(--rl) var(--rl);padding:1.5rem;min-height:280px;max-height:560px;overflow-y:auto;display:flex;flex-direction:column;gap:14px;}
+.msg{display:flex;gap:10px;animation:msgIn 0.3s ease;}
+@keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.m-ava{width:28px;height:28px;border-radius:50%;background:var(--orange3);border:1.5px solid var(--orange);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:2px;}
+.m-body{flex:1;}
+.m-text{background:var(--bg3);border:1px solid var(--border);border-radius:3px 12px 12px 12px;padding:10px 14px;font-size:13.5px;line-height:1.65;max-width:640px;color:var(--text1);}
+.m-text.warn{border-color:var(--amber);background:var(--amber3);}
+.m-text.err{border-color:var(--red);background:var(--red3);}
+.m-text.ok{border-color:var(--green);background:var(--green3);}
+.m-text code{font-family:var(--mono);background:var(--bg4);padding:1px 6px;border-radius:3px;font-size:11.5px;color:var(--orange);}
+.m-text b{color:var(--white);font-weight:600;}
+.m-time{font-size:10px;color:var(--text3);margin-top:4px;font-family:var(--mono);}
+.user-msg{justify-content:flex-end;}
+.user-msg .m-text{background:var(--orange3);border-color:var(--orange);border-radius:12px 3px 12px 12px;margin-left:auto;max-width:300px;color:var(--white);font-size:13px;}
+.typing .m-text{padding:10px 14px;}
+.dots{display:flex;gap:4px;}
+.dots span{width:6px;height:6px;background:var(--text3);border-radius:50%;animation:d 1.2s ease infinite;}
+.dots span:nth-child(2){animation-delay:.2s;}
+.dots span:nth-child(3){animation-delay:.4s;}
+@keyframes d{0%,80%,100%{transform:scale(0.7);opacity:0.4}40%{transform:scale(1);opacity:1}}
+.prog-wrap{background:var(--bg4);border-radius:3px;height:5px;margin:6px 0;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--orange),var(--orange2));border-radius:3px;transition:width 0.25s ease;}
+.prog-lbl{font-size:11px;color:var(--text3);font-family:var(--mono);}
+.cbtns{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;margin-left:38px;}
+.cbtn{background:var(--bg4);border:1px solid var(--border2);color:var(--orange);padding:6px 14px;border-radius:20px;font-family:var(--sans);font-size:12px;cursor:pointer;transition:all 0.2s;font-weight:500;}
+.cbtn:hover{background:var(--orange3);border-color:var(--orange);}
+.section{margin-top:1.5rem;animation:fadeUp 0.4s ease;}
+.sec-hdr{display:flex;align-items:center;gap:10px;margin-bottom:1rem;flex-wrap:wrap;}
+.sec-title{font-family:var(--display);font-size:1.15rem;background:linear-gradient(90deg,#fff,var(--orange2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.chip{font-size:11px;font-weight:600;padding:3px 10px;border-radius:4px;border:1px solid;letter-spacing:0.05em;font-family:var(--mono);}
+.chip-or{background:var(--orange3);border-color:var(--orange);color:var(--orange);}
+.chip-gr{background:var(--green3);border-color:var(--green);color:var(--green);}
+.chip-yw{background:var(--amber3);border-color:var(--amber);color:var(--amber);}
+.chip-re{background:var(--red3);border-color:var(--red);color:var(--red);}
+.chip-bl{background:var(--blue3);border-color:var(--blue);color:var(--blue);}
+.chip-pu{background:var(--purple3);border-color:var(--purple);color:var(--purple);}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;}
+.card-pad{padding:1.25rem 1.5rem;}
+.field-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:0.75rem;}
+.field-lbl{font-size:11px;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;min-width:130px;}
+.txt-input{background:var(--bg4);border:1px solid var(--border2);color:var(--white);padding:9px 12px;border-radius:7px;font-family:var(--mono);font-size:13px;outline:none;transition:border-color 0.2s;flex:1;min-width:180px;}
+.txt-input:focus{border-color:var(--orange);}
+.dataset-card{display:flex;align-items:center;gap:16px;padding:1.25rem 1.5rem;}
+.dataset-icon{width:48px;height:48px;border-radius:10px;background:var(--orange3);border:1.5px solid var(--orange);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.dataset-type{font-family:var(--display);font-size:1.3rem;text-transform:capitalize;color:var(--white);}
+.dataset-sub{font-size:12px;color:var(--text3);font-family:var(--mono);margin-top:2px;}
+.action-badge{font-size:10px;font-weight:700;letter-spacing:0.06em;padding:3px 9px;border-radius:5px;text-transform:uppercase;display:inline-flex;align-items:center;gap:4px;}
+.action-match{background:var(--green3);color:var(--green);border:1px solid var(--green);}
+.action-new{background:var(--blue3);color:var(--blue);border:1px solid var(--blue);}
+.action-skip{background:rgba(255,255,255,0.06);color:var(--text3);border:1px solid var(--border2);}
+.action-review{background:var(--amber3);color:var(--amber);border:1px solid var(--amber);}
+.map-tbl{width:100%;border-collapse:collapse;font-size:13px;}
+.map-tbl th{text-align:left;padding:9px 14px;color:var(--text3);font-weight:500;font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;border-bottom:1px solid var(--border2);background:var(--bg3);}
+.map-tbl td{padding:9px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.map-tbl tr:last-child td{border-bottom:none;}
+.map-tbl tr:hover td{background:var(--bg3);}
+.src-tag{font-family:var(--mono);background:var(--bg4);border:1px solid var(--border2);padding:2px 8px;border-radius:4px;font-size:11.5px;color:var(--white);}
+.arrow-cell{color:var(--text3);padding:0 4px!important;font-size:16px;}
+.c-bar-wrap{display:flex;align-items:center;gap:8px;}
+.c-bar{flex:1;background:var(--bg4);height:4px;border-radius:2px;overflow:hidden;min-width:46px;}
+.c-fill{height:100%;border-radius:2px;}
+.c-hi{background:var(--green);}
+.c-md{background:var(--amber);}
+.c-lo{background:var(--red);}
+.c-na{background:var(--text3);}
+.c-pct{font-family:var(--mono);font-size:11px;color:var(--text3);min-width:32px;}
+.map-sel{background:var(--bg4);border:1px solid var(--border2);color:var(--text1);padding:4px 8px;border-radius:5px;font-family:var(--sans);font-size:12px;cursor:pointer;transition:border-color 0.2s;max-width:180px;}
+.map-sel:focus{outline:none;border-color:var(--orange);}
+.tbl-ctrl{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;}
+.srch{flex:1;min-width:220px;background:var(--bg3);border:1px solid var(--border2);color:var(--text1);padding:9px 14px;border-radius:8px;font-family:var(--sans);font-size:13px;outline:none;transition:border-color 0.2s;}
+.srch:focus{border-color:var(--orange);}
+.srch::placeholder{color:var(--text3);}
+.flt-sel{background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:9px 12px;border-radius:8px;font-family:var(--sans);font-size:13px;cursor:pointer;}
+.flt-sel:focus{outline:none;border-color:var(--orange);}
+.btn-sm{background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:9px 14px;border-radius:8px;font-family:var(--sans);font-size:12px;cursor:pointer;transition:all 0.2s;font-weight:500;white-space:nowrap;}
+.btn-sm:hover{border-color:var(--orange);color:var(--orange);}
+.tbl-wrap{border:1px solid var(--border);border-radius:var(--r);overflow:hidden;background:var(--bg2);}
+.virt-head{display:flex;background:var(--bg3);border-bottom:1px solid var(--border2);position:sticky;top:0;z-index:10;}
+.th{padding:10px 12px;font-size:10.5px;font-weight:600;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;border-right:1px solid var(--border);transition:color 0.2s;flex-shrink:0;}
+.th:hover{color:var(--orange);}
+.th:last-child{border-right:none;}
+.virt-outer{overflow-x:auto;}
+.virt-scroll{height:440px;overflow-y:auto;position:relative;}
+.virt-row{display:flex;border-bottom:1px solid var(--border);transition:background 0.15s;border-left:3px solid transparent;}
+.virt-row:hover{background:rgba(255,107,0,0.04);}
+.virt-row.ok{border-left-color:var(--green);}
+.virt-row.warn{border-left-color:var(--amber);}
+.virt-row.error{border-left-color:var(--red);}
+.virt-row.sel{background:rgba(255,107,0,0.06);}
+.td{padding:9px 12px;font-size:12px;color:var(--text2);border-right:1px solid var(--border);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;display:flex;align-items:center;flex-shrink:0;}
+.td:last-child{border-right:none;}
+.td.editing{padding:4px 8px;}
+.td.editing input{width:100%;background:var(--bg4);border:1px solid var(--orange);color:var(--white);padding:4px 7px;border-radius:4px;font-family:var(--mono);font-size:12px;outline:none;}
+.td.t-white{color:var(--white);font-weight:500;}
+.td.t-or{color:var(--orange);font-family:var(--mono);font-size:11px;}
+.td.t-bl{color:var(--blue);font-family:var(--mono);font-size:11px;}
+.td.t-null{color:var(--text3);font-style:italic;}
+.s-ok{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.s-wn{width:7px;height:7px;border-radius:50%;background:var(--amber);flex-shrink:0;}
+.s-er{width:7px;height:7px;border-radius:50%;background:var(--red);flex-shrink:0;}
+.row-cb{width:14px;height:14px;accent-color:var(--orange);cursor:pointer;}
+.q-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:1.5rem;}
+.q-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;}
+.q-item{background:var(--bg3);border-radius:var(--r);padding:12px 14px;border:1px solid var(--border);transition:border-color 0.2s;}
+.q-item:hover{border-color:var(--border2);}
+.q-lbl{font-size:10.5px;color:var(--text3);margin-bottom:5px;letter-spacing:0.05em;text-transform:uppercase;}
+.q-val{font-size:1.6rem;font-weight:700;font-family:var(--mono);}
+.qv-or{color:var(--orange);}
+.qv-gr{color:var(--green);}
+.qv-yw{color:var(--amber);}
+.qv-re{color:var(--red);}
+.qv-bl{color:var(--blue);}
+.ddl-box{background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);padding:1rem;font-family:var(--mono);font-size:12px;color:var(--green);white-space:pre-wrap;overflow-x:auto;max-height:280px;overflow-y:auto;line-height:1.6;}
+.ddl-box .kw{color:var(--orange2);}
+.ddl-box .cm{color:var(--text3);}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:400;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border3);border-radius:var(--rl);width:92%;max-width:640px;padding:2rem;animation:fadeUp 0.3s ease;box-shadow:0 0 60px rgba(255,107,0,0.15);max-height:90vh;overflow-y:auto;}
+.modal-title{font-family:var(--display);font-size:1.4rem;color:var(--white);margin-bottom:0.4rem;}
+.modal-sub{font-size:13px;color:var(--text2);margin-bottom:1.5rem;}
+.modal-info{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:1rem;margin-bottom:1rem;}
+.modal-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);gap:10px;}
+.modal-row:last-child{border-bottom:none;padding-bottom:0;}
+.modal-key{font-size:12px;color:var(--text3);}
+.modal-val{font-size:13px;font-weight:600;color:var(--white);font-family:var(--mono);text-align:right;}
+.modal-btns{display:flex;gap:10px;margin-top:1.5rem;}
+.modal-confirm{flex:1;background:var(--orange);color:#000;border:none;padding:11px;border-radius:8px;font-family:var(--sans);font-weight:700;font-size:14px;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 20px rgba(255,107,0,0.3);}
+.modal-confirm:hover{background:var(--orange2);transform:translateY(-1px);}
+.modal-confirm:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+.modal-cancel{background:var(--bg4);border:1px solid var(--border2);color:var(--text2);padding:11px 20px;border-radius:8px;font-family:var(--sans);font-size:14px;cursor:pointer;transition:all 0.2s;}
+.modal-cancel:hover{border-color:var(--red);color:var(--red);}
+.modal-check{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);margin-bottom:1rem;}
+.db-progress{margin-top:1rem;display:none;}
+.db-log{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px;font-family:var(--mono);font-size:11px;color:var(--green);max-height:180px;overflow-y:auto;margin-top:8px;line-height:1.7;}
+.db-log-line{animation:msgIn 0.2s ease;}
+.db-log-line.err{color:var(--red);}
+.db-log-line.warn{color:var(--amber);}
+.db-log-line.info{color:var(--blue);}
+.conn-banner{display:none;margin-bottom:1rem;padding:10px 16px;border-radius:8px;font-size:12px;font-family:var(--mono);align-items:center;gap:8px;border:1px solid;}
+.conn-banner.show{display:flex;}
+.conn-banner.testing{background:var(--blue3);border-color:var(--blue);color:var(--blue);}
+.conn-banner.ok{background:var(--green3);border-color:var(--green);color:var(--green);}
+.conn-banner.fail{background:var(--red3);border-color:var(--red);color:var(--red);}
+.act-bar{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border2);padding:1rem 2rem;display:none;z-index:200;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;backdrop-filter:blur(12px);}
+.act-bar.on{display:flex;}
+.btn-primary{background:var(--orange);color:#000;border:none;padding:11px 26px;border-radius:8px;font-family:var(--sans);font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.2s;letter-spacing:0.02em;box-shadow:0 4px 24px rgba(255,107,0,0.35);}
+.btn-primary:hover{background:var(--orange2);transform:translateY(-1px);box-shadow:0 8px 32px rgba(255,107,0,0.45);}
+.btn-primary:disabled{opacity:0.45;cursor:not-allowed;transform:none;box-shadow:none;}
+.btn-sec{background:var(--bg3);border:1px solid var(--border2);color:var(--text1);padding:11px 20px;border-radius:8px;font-family:var(--sans);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all 0.2s;font-weight:500;}
+.btn-sec:hover{border-color:var(--orange);color:var(--orange);}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text3);padding:11px 18px;border-radius:8px;font-family:var(--sans);font-size:13px;cursor:pointer;transition:all 0.2s;}
+.btn-ghost:hover{border-color:var(--red);color:var(--red);}
+.act-count{font-family:var(--mono);font-size:12px;color:var(--text3);padding:0 8px;}
+.toast{position:fixed;bottom:90px;right:24px;background:var(--bg3);border:1px solid var(--orange);color:var(--white);padding:12px 18px;border-radius:var(--r);font-size:13px;z-index:300;max-width:340px;opacity:0;transform:translateY(10px);transition:all 0.3s;pointer-events:none;}
+.toast.on{opacity:1;transform:translateY(0);}
+.toast.err-toast{border-color:var(--red);}
+.toast.ok-toast{border-color:var(--green);}
+.stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:1.5rem 0;}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;transition:border-color 0.2s;}
+.stat:hover{border-color:var(--border2);}
+.stat-lbl{font-size:10px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;}
+.stat-val{font-size:1.5rem;font-weight:700;font-family:var(--mono);}
+.db-preview{background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);padding:1rem;margin-top:0.5rem;font-family:var(--mono);font-size:11px;color:var(--text2);overflow-x:auto;max-height:160px;overflow-y:auto;}
+.db-preview table{border-collapse:collapse;width:100%;}
+.db-preview th{color:var(--orange);text-transform:uppercase;font-size:10px;letter-spacing:0.1em;padding:4px 10px;text-align:left;border-bottom:1px solid var(--border2);white-space:nowrap;}
+.db-preview td{padding:5px 10px;border-bottom:1px solid var(--border);color:var(--text2);white-space:nowrap;}
+.db-preview tr:hover td{color:var(--white);}
+.setup-warn{display:none;background:var(--red3);border:1px solid var(--red);color:var(--red);border-radius:var(--r);padding:14px 16px;font-size:12.5px;line-height:1.6;margin-bottom:1rem;}
+.setup-warn.show{display:block;}
+.setup-warn code{background:var(--bg4);padding:1px 6px;border-radius:3px;color:var(--white);font-family:var(--mono);}
+.identity-wait{display:none;background:var(--amber3);border:1px solid var(--amber);color:var(--amber);border-radius:var(--r);padding:14px 16px;font-size:12.5px;line-height:1.6;margin-bottom:1rem;align-items:center;gap:10px;}
+.identity-wait.show{display:flex;}
+.identity-badge{display:flex;align-items:center;gap:6px;background:var(--purple3);border:1px solid var(--purple);color:var(--purple);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;font-family:var(--mono);}
+.upload-hero.locked{opacity:0.35;pointer-events:none;filter:grayscale(0.4);}
+/* New Column Approval Panel */
+.new-col-panel{background:var(--bg2);border:1.5px solid var(--blue);border-radius:var(--rl);padding:1.5rem;margin-top:1.5rem;animation:fadeUp 0.4s ease;}
+.new-col-panel-title{font-family:var(--display);font-size:1.1rem;color:var(--white);margin-bottom:0.3rem;}
+.new-col-panel-sub{font-size:12.5px;color:var(--text2);margin-bottom:1rem;}
+.new-col-list{display:flex;flex-direction:column;gap:8px;margin-bottom:1.25rem;max-height:260px;overflow-y:auto;}
+.new-col-item{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:10px 14px;display:flex;align-items:flex-start;gap:12px;}
+.new-col-name{font-family:var(--mono);font-size:12px;color:var(--blue);font-weight:600;min-width:140px;}
+.new-col-type{font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:2px;}
+.new-col-samples{font-size:11px;color:var(--text2);margin-top:3px;}
+.new-col-actions{display:flex;gap:10px;flex-wrap:wrap;}
+.btn-approve{background:var(--blue);color:#fff;border:none;padding:10px 22px;border-radius:8px;font-family:var(--sans);font-weight:700;font-size:13px;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 18px rgba(59,130,246,0.35);}
+.btn-approve:hover{background:#60a5fa;transform:translateY(-1px);}
+.btn-deny{background:var(--bg4);border:1px solid var(--border2);color:var(--text2);padding:10px 22px;border-radius:8px;font-family:var(--sans);font-size:13px;cursor:pointer;transition:all 0.2s;}
+.btn-deny:hover{border-color:var(--amber);color:var(--amber);}
+/* Import History Panel */
+.history-panel{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);overflow:hidden;margin-top:1.5rem;animation:fadeUp 0.4s ease;}
+.history-hdr{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border2);cursor:pointer;user-select:none;}
+.history-hdr:hover{background:var(--bg3);}
+.history-body{display:none;padding:1rem 1.25rem;}
+.history-body.open{display:block;}
+.hist-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.hist-tbl th{text-align:left;padding:7px 10px;color:var(--text3);font-weight:600;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;border-bottom:1px solid var(--border2);}
+.hist-tbl td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text2);font-family:var(--mono);font-size:11px;}
+.hist-tbl tr:hover td{background:var(--bg3);}
+.hist-action-ok{color:var(--green);}
+.hist-action-warn{color:var(--amber);}
+.hist-action-info{color:var(--blue);}
+.hist-empty{color:var(--text3);font-size:12px;padding:1rem 0;text-align:center;}
+@media(max-width:768px){
+  .main{padding:1rem;}
+  .upload-title{font-size:1.5rem;}
+  .q-grid{grid-template-columns:repeat(2,1fr);}
+  .tbl-ctrl{flex-direction:column;}
+  .srch{width:100%;}
+  .hdr{padding:0 1rem;}
+  .act-bar{flex-direction:column;padding:1rem;}
+  .stats-bar{grid-template-columns:repeat(2,1fr);}
+  .field-lbl{min-width:100%;}
+}
+</style>
+</head>
+<body>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-title">🚀 Push to database</div>
+    <div class="modal-sub">Review the schema changes and data before anything touches Supabase.</div>
+
+    <div class="conn-banner testing show" id="modalConnBanner">
+      <div class="status-pulse"></div>
+      <span id="modalConnTxt">Testing connection to Supabase...</span>
+    </div>
+
+    <div class="modal-info" id="modalInfo"></div>
+
+    <label class="modal-check" id="upsertRow" style="display:none">
+      <input type="checkbox" class="row-cb" id="upsertChk">
+      Upsert on <span id="upsertKeyLbl" style="color:var(--orange);font-family:var(--mono)"></span> instead of plain insert (updates existing rows with a matching key)
+    </label>
+
+    <div class="db-preview" id="dbPreview"></div>
+    <div class="db-progress" id="dbProgress">
+      <div class="prog-wrap"><div class="prog-fill" id="dbProgFill" style="width:0%"></div></div>
+      <div class="prog-lbl" id="dbProgLbl">Preparing...</div>
+      <div class="db-log" id="dbLog"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-confirm" id="modalConfirmBtn" onclick="executeImport()" disabled>⏳ Testing connection…</button>
+      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+    </div>
+    <button class="btn-sm" id="failedRowsBtn" onclick="dlFailedRows()" style="display:none;width:100%;margin-top:10px">⬇ Download Failed Rows (CSV)</button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="logo">
+    <div class="logo-mark">$</div>
+    <div>
+      <div class="logo-name">BILLAN AI<span class="logo-tag">Universal Import</span></div>
+    </div>
+  </div>
+  <div class="hdr-center">
+    <div class="status-pill" id="statusPill">
+      <div class="status-pulse"></div>
+      <span id="statusTxt">Ready</span>
+    </div>
+  </div>
+  <div class="hdr-actions">
+    <div class="identity-badge" id="identityBadge" style="display:none"><span id="schoolNameBadge">—</span></div>
+    <button class="conn-badge" id="connBadge" onclick="pingSupabase(true)" title="Click to test DB connection">
+      <div class="status-pulse"></div>
+      <span id="connTxt">Test DB</span>
+    </button>
+    <div class="db-badge" id="dbBadge" style="display:none">
+      <div class="status-pulse" style="background:var(--green)"></div>
+      Imported ✓
+    </div>
+    <button class="hdr-btn" id="startOverBtn" onclick="startOver()" style="display:none">↺ Start Over</button>
+  </div>
+</header>
+
+<div class="main">
+
+<div class="identity-wait" id="identityWait">
+  <div class="status-pulse" style="color:var(--amber)"></div>
+  <span>⏳ Waiting for Library System session… this tool must be loaded inside the BILLAN Library Management System.</span>
+</div>
+
+<div class="setup-warn" id="setupWarn">
+  ⚠ <b>The dynamic-schema RPC functions weren't found</b> on this Supabase project (<code>import_engine_table_exists</code> etc).
+  Tables can't be auto-created or auto-altered without them. Run <code>supabase_setup.sql</code> once in your
+  Supabase SQL Editor, then click <b>Test DB</b> again. You can still import into a table that already has every
+  column the file needs.
+</div>
+
+<!-- UPLOAD ZONE -->
+<div id="uploadZone" class="upload-hero locked"
+  onclick="handleZoneClick(event)"
+  ondragover="event.preventDefault();this.classList.add('drag')"
+  ondragleave="this.classList.remove('drag')"
+  ondrop="handleDrop(event)">
+  <div class="upload-orb">🤖</div>
+  <h1 class="upload-title">Universal AI Import Engine</h1>
+  <p class="upload-sub">Drop any dataset — books, products, employees, customers, anything — and it'll be read, typed, schema'd and imported. No mapping file required.</p>
+  <div class="format-grid">
+    <span class="fmt-badge hi">CSV</span>
+    <span class="fmt-badge hi">XLSX</span>
+    <span class="fmt-badge hi">JSON</span>
+    <span class="fmt-badge hi">XML</span>
+    <span class="fmt-badge">TSV</span>
+    <span class="fmt-badge">TXT</span>
+    <span class="fmt-badge">LOG</span>
+    <span class="fmt-badge">Any Format</span>
+  </div>
+  <button class="browse-btn" onclick="event.stopPropagation();document.getElementById('fileInput').click()">
+    📂 Browse File
+  </button>
+  <input type="file" id="fileInput" accept="*/*" onchange="handleFileSelect(event)">
+  <div style="margin-top:1.5rem;font-size:11px;color:var(--text3);font-family:var(--mono)">
+    NO SCHEMA. NO MAPPING FILE. NO PROBLEM.
+  </div>
+</div>
+
+<!-- BOT PANEL -->
+<div class="bot-panel" id="botPanel">
+  <div class="bot-head">
+    <div class="bot-ava">🤖</div>
+    <div class="bot-meta">
+      <div class="name">BILLAN AI<span style="color:var(--orange);font-size:10px;font-weight:700;letter-spacing:0.1em"> PRO v3.0</span></div>
+      <div class="ver">Universal Schema-Driven Import Engine</div>
+    </div>
+    <div class="bot-stat" id="botStat">
+      <div class="status-pulse" style="color:var(--orange)"></div>
+      <span>Analysing...</span>
+    </div>
+  </div>
+  <div class="chat-win" id="chatWin"></div>
+</div>
+
+<!-- DATASET / TABLE SECTION -->
+<div class="section" id="datasetSection" style="display:none">
+  <div class="sec-hdr">
+    <div class="sec-title">🧬 Detected Dataset</div>
+    <span class="chip chip-or" id="datasetConf"></span>
+  </div>
+  <div class="card">
+    <div class="dataset-card">
+      <div class="dataset-icon" id="datasetIcon">📦</div>
+      <div style="flex:1">
+        <div class="dataset-type" id="datasetType">generic</div>
+        <div class="dataset-sub" id="datasetSub">—</div>
+      </div>
+    </div>
+    <div class="card-pad" style="border-top:1px solid var(--border);padding-top:1rem">
+      <div class="field-row">
+        <span class="field-lbl">Target table</span>
+        <input type="text" class="txt-input" id="tableNameInput" oninput="onTableNameEdit()">
+        <button class="btn-sm" onclick="checkDatabase()">🔎 Check Database</button>
+      </div>
+      <div class="conn-banner" id="tableCheckBanner" style="margin-bottom:0"></div>
+    </div>
+  </div>
+</div>
+
+<!-- STATS BAR -->
+<div class="stats-bar" id="statsBar" style="display:none">
+  <div class="stat"><div class="stat-lbl">Total Rows</div><div class="stat-val qv-or" id="st-total">0</div></div>
+  <div class="stat"><div class="stat-lbl">✅ Ready</div><div class="stat-val qv-gr" id="st-ok">0</div></div>
+  <div class="stat"><div class="stat-lbl">⚠ Warnings</div><div class="stat-val qv-yw" id="st-warn">0</div></div>
+  <div class="stat"><div class="stat-lbl">❌ Skipped</div><div class="stat-val qv-re" id="st-err">0</div></div>
+  <div class="stat"><div class="stat-lbl">Parse Time</div><div class="stat-val qv-bl" id="st-time">—</div></div>
+  <div class="stat"><div class="stat-lbl">Columns</div><div class="stat-val qv-or" id="st-cols">—</div></div>
+</div>
+
+<!-- MAPPING SECTION -->
+<div class="section" id="mapSection" style="display:none">
+  <div class="sec-hdr">
+    <div class="sec-title">📊 Column Mapping</div>
+    <span class="chip chip-gr" id="mapMatch" style="display:none"></span>
+    <span class="chip chip-bl" id="mapNew" style="display:none"></span>
+    <span class="chip chip-yw" id="mapReview" style="display:none"></span>
+    <span class="chip chip-re" id="mapSkip" style="display:none"></span>
+  </div>
+  <div class="card">
+    <table class="map-tbl" id="mapTbl">
+      <thead>
+        <tr>
+          <th>Source Column</th><th></th><th>Database Column</th>
+          <th>Confidence</th><th>Detected Type</th><th>Sample Values</th><th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="mapBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- SCHEMA / DDL PREVIEW -->
+<div class="section" id="ddlSection" style="display:none">
+  <div class="sec-hdr">
+    <div class="sec-title">🛠 Schema Changes</div>
+    <span class="chip chip-pu" id="ddlChip"></span>
+  </div>
+  <div class="card card-pad">
+    <div class="ddl-box" id="ddlBox"></div>
+  </div>
+</div>
+
+<!-- PREVIEW SECTION -->
+<div class="section" id="prevSection" style="display:none">
+  <div class="sec-hdr">
+    <div class="sec-title">📋 Extracted Records</div>
+    <span class="chip chip-or" id="prevCount"></span>
+    <span class="chip chip-yw" id="warnChip" style="display:none"></span>
+    <span class="chip chip-re" id="errChip" style="display:none"></span>
+  </div>
+  <div class="tbl-ctrl">
+    <input type="text" class="srch" id="srch" placeholder="🔍 Search this data..." oninput="filterTable()">
+    <select class="flt-sel" id="statusFlt" onchange="filterTable()">
+      <option value="all">All Status</option>
+      <option value="ok">✅ Ready</option>
+      <option value="warn">⚠ Warnings</option>
+      <option value="error">❌ Errors</option>
+    </select>
+    <button class="btn-sm" onclick="toggleAll()">☑ Select All</button>
+  </div>
+  <div class="tbl-wrap">
+    <div class="virt-outer">
+      <div class="virt-head" id="virtHead"></div>
+      <div class="virt-scroll" id="virtScroll" onscroll="renderVirt()">
+        <div id="spTop"></div><div id="rowsWrap"></div><div id="spBot"></div>
+      </div>
+    </div>
+  </div>
+  <div style="padding:8px 12px;font-size:11px;color:var(--text3);font-family:var(--mono);display:flex;gap:16px;flex-wrap:wrap">
+    <span>Showing <b style="color:var(--white)" id="visCount">0</b> / <b style="color:var(--white)" id="totCount">0</b> rows</span>
+    <span>Double-click any cell to edit</span>
+    <span><span style="color:var(--green)">█</span> ready &nbsp;<span style="color:var(--amber)">█</span> warnings &nbsp;<span style="color:var(--red)">█</span> skipped</span>
+  </div>
+</div>
+
+<!-- QUALITY REPORT -->
+<div class="section" id="qualSection" style="display:none">
+  <div class="sec-hdr"><div class="sec-title">📈 Data Quality Report</div></div>
+  <div class="q-card"><div class="q-grid" id="qGrid"></div></div>
+</div>
+
+<!-- NEW COLUMN APPROVAL PANEL -->
+<div id="newColApprovalPanel" style="display:none"></div>
+
+<!-- IMPORT HISTORY PANEL -->
+<div class="history-panel" id="historyPanel" style="display:none">
+  <div class="history-hdr" onclick="toggleHistoryPanel()">
+    <span style="font-size:16px">📜</span>
+    <span class="sec-title" style="font-size:1rem">Import History</span>
+    <span class="chip chip-bl" id="histChip" style="display:none"></span>
+    <span style="margin-left:auto;color:var(--text3);font-size:12px" id="histToggleArrow">▼ expand</span>
+  </div>
+  <div class="history-body" id="historyBody">
+    <div class="hist-empty" id="histEmpty">Loading history…</div>
+    <table class="hist-tbl" id="histTbl" style="display:none">
+      <thead>
+        <tr>
+          <th>Table</th><th>Action</th><th>Rows</th><th>Batch ID</th><th>When</th>
+        </tr>
+      </thead>
+      <tbody id="histBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div style="height:80px"></div>
+</div>
+
+<!-- ACTION BAR -->
+<div class="act-bar" id="actBar">
+  <button class="btn-primary" id="importBtn" onclick="showImportModal()">🚀 Import to Database</button>
+  <button class="btn-sec" onclick="dlJSON()">⬇ JSON</button>
+  <button class="btn-sec" onclick="dlCSV()">⬇ CSV</button>
+  <button class="btn-sec" onclick="dlSchemaSQL()">⬇ Schema SQL</button>
+  <div class="act-count" id="actCount"></div>
+  <button class="btn-ghost" onclick="startOver()">↺ Reset</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   UNIVERSAL AI IMPORT ENGINE
+   ──────────────────────────────────────────────────────────────────
+   This file replaces the old book-only importer. There is no
+   FIELD_MAP, no ALL_FIELDS, no hardcoded "books" table, no book_id /
+   subject / grade / publisher anywhere below. Every column the
+   uploaded file contains is discovered, typed, and either matched to
+   an existing database column or proposed as a new one — for ANY
+   dataset shape.
+
+   Supabase note: PostgREST (the REST API anon key talks to) can only
+   do CRUD on tables that already exist. It cannot CREATE TABLE or
+   ALTER TABLE. So schema evolution (creating tables / adding columns)
+   goes through a handful of small RPC functions defined in
+   supabase_setup.sql — run that once per project. Everything else
+   (inserts, upserts, discovery reads) is plain PostgREST.
+══════════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════════
+   IDENTITY — this tool has no login of its own.
+   It receives identity from the parent Library Management System
+   via postMessage. Until IDENTITY is set, the upload zone stays locked.
+══════════════════════════════════════════════════════════════════ */
+let IDENTITY = null; // { identityType:'admin'|'staff', schoolCode, password, schoolId, schoolName }
+let ACCESS_TOKEN = null;
+window.addEventListener('message', (event) => {
+  if (event.data?.type === 'BILLAN_IDENTITY') {
+    IDENTITY = event.data;
+    ACCESS_TOKEN = event.data.access_token || null;
+    onIdentityReceived();
+  }
+});
+
+function onIdentityReceived() {
+  // Unlock upload zone
+  document.getElementById('uploadZone').classList.remove('locked');
+  document.getElementById('identityWait').classList.remove('show');
+  // Show school name in header
+  if (IDENTITY.schoolName) {
+    const badge = document.getElementById('identityBadge');
+    document.getElementById('schoolNameBadge').textContent = IDENTITY.schoolName;
+    badge.style.display = 'flex';
+  }
+  // Now safe to ping — needs identity for credentialed probe
+  pingSupabase(false);
+  // Show history panel if we have a schoolId
+  if (IDENTITY.schoolId) {
+    document.getElementById('historyPanel').style.display = 'block';
+    loadImportHistory();
+  }
+}
+
+// Show the waiting notice on load (before identity arrives)
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('identityWait').classList.add('show');
+});
+
+/* ──────────────────────────────────────────────────────────────────
+   SUPABASE CONFIG
+────────────────────────────────────────────────────────────────── */
+const SB_URL  = 'https://nzauptxxvccnpvezzdyu.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im56YXVwdHh4dmNjbnB2ZXp6ZHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3Mjg1ODcsImV4cCI6MjA5ODMwNDU4N30.M7XLTeOIH8o7XV_J1Yrr5V6uQ4WjaT3mf8by5HsPT_g'; // role:"anon"
+
+function sbHeaders(extra = {}) {
+  // 🔥 CRITICAL FIX: Use the real Admin JWT if available, otherwise fallback to ANON key
+  let authHeader = 'Bearer ' + SB_ANON;
+  if (IDENTITY?.identityType === 'admin' && ACCESS_TOKEN) {
+      authHeader = 'Bearer ' + ACCESS_TOKEN;
+  }
+  
+  return {
+    'Content-Type'  : 'application/json',
+    'apikey'        : SB_ANON,
+    'Authorization' : authHeader,
+    ...extra
+  };
+}
+
+async function sbRpc(fn, params) {
+  const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {
+    method: 'POST', headers: sbHeaders(), body: JSON.stringify(params)
+  });
+  if (!r.ok) {
+    let detail = '';
+    try { const j = await r.json(); detail = j.message || j.hint || JSON.stringify(j); }
+    catch(e) { detail = await r.text().catch(()=> ''); }
+    const err = new Error(detail || `RPC ${fn} failed (${r.status})`);
+    err.status = r.status;
+    throw err;
+  }
+  const ct = r.headers.get('content-type')||'';
+  return ct.includes('json') ? r.json() : null;
+}
+/* ──────────────────────────────────────────────────────────────────
+   IDENTITY-AWARE RPC DISPATCH
+   Staff path: passes p_school_code + p_password for every RPC.
+   Admin path: relies on RLS + auth.uid() — no credential params.
+   EXCEPTION: when staffFn === adminFn, the RPC is credential-agnostic
+   by design (e.g. import_engine_table_exists / import_engine_get_columns
+   are plain read-only introspection functions with a single signature
+   in Postgres — they take ONLY p_table, never credentials). Attaching
+   p_school_code/p_password in that case doesn't match any function
+   signature and PostgREST returns "could not find the function ...
+   in the schema cache". So skip credential injection whenever the
+   two names are identical.
+────────────────────────────────────────────────────────────────── */
+async function billanRpc(staffFn, adminFn, params) {
+  if (!IDENTITY) throw new Error('No active session from the Library System.');
+  if (staffFn === adminFn) {
+    return sbRpc(staffFn, params); // credential-agnostic — same signature for everyone
+  }
+  if (IDENTITY.identityType === 'admin') {
+    return sbRpc(adminFn, params); // RLS covers it; no credential params sent
+  }
+  return sbRpc(staffFn, { p_school_code: IDENTITY.schoolCode, p_password: IDENTITY.password, ...params });
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   IDENTITY-AWARE ROW INSERT
+   Admin: direct PostgREST (RLS already scopes by auth.uid).
+   Staff: credentialed RPC (anon has zero grants on dynamic tables).
+   NEVER include school_id in the client-built payload — the DB layer
+   injects it from validated identity.
+────────────────────────────────────────────────────────────────── */
+async function insertBatch(payload) {
+  if (!IDENTITY) throw new Error('No active session.');
+  // Both paths now go through a credentialed/session-checked RPC that
+  // forces school_id server-side from the caller's validated identity —
+  // never trusts the uploaded file or the client for which organization
+  // a row belongs to.
+  try {
+    const rpc = IDENTITY.identityType === 'admin' ? 'import_engine_insert_rows_admin' : 'import_engine_insert_rows';
+    const params = IDENTITY.identityType === 'admin'
+      ? { p_table: udm.tableName, p_rows: payload, p_import_batch: udm.importBatch }
+      : { p_school_code: IDENTITY.schoolCode, p_password: IDENTITY.password, p_table: udm.tableName, p_rows: payload, p_import_batch: udm.importBatch };
+    const count = await sbRpc(rpc, params);
+    return { ok: true, count };
+  } catch(e) {
+    return { ok: false, error: e.message, status: e.status };
+  }
+}
+/* ──────────────────────────────────────────────────────────────────
+   CONNECTION TEST
+────────────────────────────────────────────────────────────────── */
+let sbConnected = false;
+let rpcInstalled = null;
+
+async function pingSupabase(showToast = false) {
+  const badge = document.getElementById('connBadge');
+  const txt   = document.getElementById('connTxt');
+  badge.className = 'conn-badge';
+  txt.textContent = 'Testing…';
+  // No direct table access anymore — anon has zero table grants.
+  // import_engine_probe() needs no credentials and doubles as both
+  // the "can we reach Supabase" check and the "are the RPCs installed" check.
+  try {
+    await sbRpc('import_engine_probe', {});
+    sbConnected = true;
+    rpcInstalled = true;
+    document.getElementById('setupWarn').className = 'setup-warn';
+    badge.className = 'conn-badge connected';
+    txt.textContent = 'DB Connected ✓';
+    if (showToast) toast('✅ Supabase connected — dynamic schema RPCs found!', 'ok');
+    return true;
+  } catch(e) {
+    sbConnected = false;
+    badge.className = 'conn-badge error';
+    if (e.status === 401 || e.status === 403) {
+      txt.textContent = 'Auth Error';
+      if (showToast) toast('❌ Anon key rejected (' + e.status + '). Double-check SB_URL/SB_ANON.', 'err');
+    } else if (e.status === 404) {
+      rpcInstalled = false;
+      document.getElementById('setupWarn').className = 'setup-warn show';
+      txt.textContent = 'Setup needed';
+      if (showToast) toast('⚠ Connected, but import_engine_probe() doesn\'t exist yet — run the setup SQL in the SQL Editor first.', 'err');
+    } else if (e.status) {
+      txt.textContent = 'DB Error ' + e.status;
+      if (showToast) toast('❌ Could not reach Supabase (' + e.status + ')', 'err');
+    } else {
+      txt.textContent = 'Network Error';
+      if (showToast) toast('❌ Network error: ' + e.message, 'err');
+    }
+    return false;
+  }
+}
+// Do NOT auto-ping on load — wait for IDENTITY (onIdentityReceived calls pingSupabase)
+
+
+/* ══════════════════════════════════════════════════════════════════
+   TYPE SYSTEM
+══════════════════════════════════════════════════════════════════ */
+const SQL_TYPE = {
+  text:'text', integer:'bigint', decimal:'numeric', boolean:'boolean',
+  date:'date', datetime:'timestamptz', email:'text', phone:'text',
+  url:'text', json:'jsonb', uuid:'uuid'
+};
+
+function looksLikeDate(v){
+  return /^\d{4}-\d{2}-\d{2}$/.test(v) || /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(v) || /^\d{1,2}-\d{1,2}-\d{4}$/.test(v) || /^\d{1,2}\.\d{1,2}\.\d{4}$/.test(v);
+}
+function looksLikeDatetime(v){
+  return /^\d{4}-\d{2}-\d{2}[ T]\d{1,2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/.test(v);
+}
+const TYPE_TESTS = [
+  ['uuid',     v => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)],
+  ['email',    v => /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(v)],
+  ['url',      v => /^https?:\/\/\S+$/i.test(v)],
+  ['json',     v => { const t=v.trim(); if(!(t[0]==='{'||t[0]==='[')) return false; try{JSON.parse(t);return true;}catch(e){return false;} }],
+  ['datetime', looksLikeDatetime],
+  ['date',     looksLikeDate],
+  ['boolean',  v => /^(true|false|yes|no|y|n)$/i.test(v.trim())],
+  ['integer',  v => /^-?\d+$/.test(v.trim())],
+  ['decimal',  v => /^-?\d+\.\d+$/.test(v.trim()) || /^-?\d+\.\d+e-?\d+$/i.test(v.trim())],
+  ['phone',    v => /^\+?[\d][\d\-\s().]{6,18}\d$/.test(v.trim()) && /[\-\s().]|^\+/.test(v.trim())],
+];
+const HEADER_HINTS = [
+  [/e-?mail/i,'email'], [/phone|tel(ephone)?|mobile|cell/i,'phone'],
+  [/url|website|link/i,'url'], [/^id$|_id$|uuid|guid/i,'uuid'],
+  [/date|_at$|^dob$|birthday/i,'date'],
+  [/price|amount|salary|cost|total|balance|rate|fee/i,'decimal'],
+  [/qty|quantity|count|stock|age|year|num|number|tot$/i,'integer'],
+  [/^is_|^has_|active|enabled|flag/i,'boolean'],
+  [/json|payload|meta|data$/i,'json'],
+];
+
+function inferType(values, header){
+  const sample = values.filter(v=>v!=null && String(v).trim()!=='').slice(0,60).map(String);
+  if(sample.length===0) return {type:'text', confidence:0, samples:[]};
+  const ratios = {};
+  for(const [t, test] of TYPE_TESTS){
+    ratios[t] = sample.filter(v=>{ try{return test(v.trim());}catch(e){return false;} }).length / sample.length;
+  }
+  // header hint nudges the relevant type up a bit, since "Phone" full of
+  // digits-only values would otherwise just look like plain integers
+  for(const [re, t] of HEADER_HINTS){
+    if(re.test(header) && ratios[t] !== undefined) ratios[t] = Math.min(1, ratios[t] + 0.25);
+  }
+  let best = 'text', bestScore = 0;
+  for(const [t] of TYPE_TESTS){
+    if(ratios[t] > bestScore){ bestScore = ratios[t]; best = t; }
+  }
+  if(bestScore < 0.5){ best = 'text'; bestScore = 1; } // fall back cleanly to text
+  const sizeFactor = sample.length < 5 ? 0.75 : 1;
+  const confidence = Math.round(Math.min(100, bestScore*100*sizeFactor));
+  const uniq = [...new Set(sample)];
+  return {type:best, confidence, samples: uniq.slice(0,4)};
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   DATASET CLASSIFIER (heuristic — keyword overlap against known
+   shapes; falls back to "generic" when nothing scores meaningfully)
+══════════════════════════════════════════════════════════════════ */
+const DATASET_SIGNATURES = {
+  books:      {icon:'📚', kw:['isbn','book','title','author','publisher','subject','curriculum','grade','shelf','library']},
+  students:   {icon:'🎓', kw:['student','class','grade','gpa','enrollment','school','guardian','major']},
+  employees:  {icon:'🧑‍💼', kw:['employee','department','salary','hire','position','manager','staff','payroll']},
+  customers:  {icon:'🧾', kw:['customer','client','email','phone','address','company','contact']},
+  inventory:  {icon:'📦', kw:['sku','stock','warehouse','reorder','inventory','bin','location']},
+  products:   {icon:'🛒', kw:['product','price','sku','category','brand','stock','upc']},
+  orders:     {icon:'🧮', kw:['order','total','status','shipping','tracking','order_date','quantity']},
+  suppliers:  {icon:'🚚', kw:['supplier','vendor','lead_time','contact','po_number']},
+  schools:    {icon:'🏫', kw:['school','principal','enrollment','district','campus']},
+  medical:    {icon:'🩺', kw:['patient','diagnosis','doctor','medication','mrn','dob','prescription']},
+  finance:    {icon:'💰', kw:['account','transaction','invoice','currency','balance','ledger','tax']},
+};
+function classifyDataset(headers){
+  const norm = headers.map(h=>h.toLowerCase().replace(/[^a-z0-9]+/g,'_'));
+  const scores = {};
+  for(const [type, sig] of Object.entries(DATASET_SIGNATURES)){
+    let s = 0;
+    for(const kw of sig.kw) for(const h of norm) if(h.includes(kw)) s++;
+    scores[type] = s;
+  }
+  const ranked = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+  const [topType, topScore] = ranked[0];
+  const runnerUpScore = ranked[1] ? ranked[1][1] : 0;
+  if(topScore === 0) return {type:'generic', confidence:0, icon:'📦', scores};
+  // a single ambiguous keyword shouldn't read as near-certain; confidence
+  // grows with how many distinct signals matched, and shrinks if a
+  // competing dataset type matched almost as many
+  let confidence = 25 + topScore*18 - runnerUpScore*10;
+  confidence = Math.max(30, Math.min(95, Math.round(confidence)));
+  return {type:topType, confidence, icon:DATASET_SIGNATURES[topType].icon, scores};
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   IDENTIFIER SANITIZING
+══════════════════════════════════════════════════════════════════ */
+function sanitizeIdent(name, used){
+  let s = String(name).trim().toLowerCase()
+    .replace(/[^a-z0-9]+/g,'_')
+    .replace(/^_+|_+$/g,'')
+    .replace(/^(\d)/,'c_$1') || 'col';
+  s = s.slice(0,55);
+  if(!s) s = 'col';
+  let final = s, n = 2;
+  while(used.has(final)){ final = `${s}_${n++}`; }
+  used.add(final);
+  return final;
+}
+function suggestTableName(datasetType, headers){
+  if(datasetType && datasetType !== 'generic') return datasetType;
+  // fall back to a pluralized guess from the most "title-like" header,
+  // or just a timestamped generic name
+  return 'imported_data';
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   FILE FORMAT / ENCODING DETECTION  (format-agnostic — unchanged in
+   spirit from before, since none of this was ever book-specific)
+══════════════════════════════════════════════════════════════════ */
+function detectFmt(bytes,text,name){
+  if(bytes[0]===0x50&&bytes[1]===0x4B) return 'XLSX';
+  const t=text.trimStart();
+  if(t.startsWith('<')) return 'XML';
+  if(t.startsWith('{')||t.startsWith('[')) return 'JSON';
+  const ext=name.split('.').pop().toLowerCase();
+  if(ext==='json') return 'JSON';
+  if(ext==='xml') return 'XML';
+  if(ext==='tsv') return 'TSV';
+  if(['xlsx','xls'].includes(ext)) return 'XLSX';
+  const sample=text.split('\n').slice(0,10).join('\n');
+  const tabs=(sample.match(/\t/g)||[]).length,commas=(sample.match(/,/g)||[]).length,semis=(sample.match(/;/g)||[]).length,pipes=(sample.match(/\|/g)||[]).length;
+  const max=Math.max(tabs,commas,semis,pipes);
+  if(max===tabs) return 'TSV';
+  if(max===semis) return 'CSV_SEMI';
+  if(max===pipes) return 'CSV_PIPE';
+  return 'CSV';
+}
+function detectEnc(bytes){
+  if(bytes[0]===0xFF&&bytes[1]===0xFE) return 'utf-16le';
+  if(bytes[0]===0xFE&&bytes[1]===0xFF) return 'utf-16be';
+  return 'utf-8';
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PARSERS — CSV / TSV / JSON / XML / XLSX / TXT
+   These already worked on arbitrary headers; the only change is
+   de-duplicating header names so two columns never collide and
+   silently overwrite each other.
+══════════════════════════════════════════════════════════════════ */
+function dedupeHeaders(headers){
+  const seen=new Map(); const out=[];
+  for(const raw of headers){
+    const h = (raw||'').toString().trim() || 'column';
+    const n = (seen.get(h)||0)+1; seen.set(h,n);
+    out.push(n===1?h:`${h}_${n}`);
+  }
+  return out;
+}
+function parseCSV(text,fmt){
+  let d=',';
+  if(fmt==='TSV') d='\t';
+  else if(fmt==='CSV_SEMI') d=';';
+  else if(fmt==='CSV_PIPE') d='|';
+  else {
+    const s=text.split('\n').slice(0,6).join('\n');
+    const tabs=(s.match(/\t/g)||[]).length,commas=(s.match(/,/g)||[]).length,semis=(s.match(/;/g)||[]).length,pipes=(s.match(/\|/g)||[]).length;
+    const m=Math.max(tabs,commas,semis,pipes);
+    if(m===tabs)d='\t';else if(m===semis)d=';';else if(m===pipes)d='|';else d=',';
+  }
+  const lines=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+  if(lines.length<2) return {rows:[],headers:[]};
+  const headers=dedupeHeaders(csvLine(lines[0],d));
+  const rows=[];
+  for(let i=1;i<lines.length;i++){
+    const ln=lines[i].trim(); if(!ln) continue;
+    const vals=csvLine(ln,d);
+    if(vals.every(v=>!v)) continue;
+    const row={};
+    headers.forEach((h,idx)=>{ row[h]=(vals[idx]||'').trim(); });
+    rows.push(row);
+  }
+  return {rows,headers};
+}
+function csvLine(line,d){
+  const r=[]; let c='',inQ=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='"'){ if(inQ&&line[i+1]==='"'){c+='"';i++;}else inQ=!inQ; }
+    else if(ch===d&&!inQ){r.push(c.trim());c='';}
+    else c+=ch;
+  }
+  r.push(c.trim()); return r;
+}
+function parseJSON(text){
+  let d; try{d=JSON.parse(text);}catch(e){throw new Error('Invalid JSON: '+e.message);}
+  let rows = [];
+  if(Array.isArray(d)) rows = d.length&&typeof d[0]==='object'?d.map(flatObj):[];
+  else if(typeof d==='object'){
+    let found=false;
+    for(const k of Object.keys(d)) if(Array.isArray(d[k])&&d[k].length&&typeof d[k][0]==='object'){ rows=d[k].map(flatObj); found=true; break; }
+    if(!found) rows=[flatObj(d)];
+  }
+  const headersSet=new Set(); rows.forEach(r=>Object.keys(r).forEach(k=>headersSet.add(k)));
+  const headers=dedupeHeaders([...headersSet]);
+  return {rows,headers};
+}
+function flatObj(o,p=''){
+  const f={};
+  for(const[k,v]of Object.entries(o)){
+    const key=p?`${p}.${k}`:k;
+    if(v!==null&&typeof v==='object'&&!Array.isArray(v)) Object.assign(f,flatObj(v,key));
+    else f[key]=v===null||v===undefined?'':String(v);
+  }
+  return f;
+}
+function parseXML(text){
+  const doc=new DOMParser().parseFromString(text,'text/xml');
+  const root=doc.documentElement;
+  const childTags={};
+  root.childNodes.forEach(n=>{ if(n.nodeType===1) childTags[n.tagName]=(childTags[n.tagName]||0)+1; });
+  const recTag=Object.entries(childTags).sort((a,b)=>b[1]-a[1])[0];
+  if(!recTag) return {rows:[],headers:[]};
+  const rows = Array.from(root.querySelectorAll(recTag[0])).map(rec=>{
+    const row={};
+    rec.childNodes.forEach(n=>{ if(n.nodeType===1) row[n.tagName]=n.textContent.trim(); });
+    return row;
+  }).filter(r=>Object.keys(r).length>0);
+  const headersSet=new Set(); rows.forEach(r=>Object.keys(r).forEach(k=>headersSet.add(k)));
+  return {rows, headers: dedupeHeaders([...headersSet])};
+}
+async function parseXLSX(ab){
+  const bytes=new Uint8Array(ab);
+  const files=await extractZIP(bytes);
+  const ss=files['xl/sharedStrings.xml']?parseSharedStrings(files['xl/sharedStrings.xml']):[];
+  const shXml=files['xl/worksheets/sheet1.xml'];
+  if(!shXml) throw new Error('Cannot read Excel structure. Save as CSV and try again.');
+  return parseSheet(shXml,ss);
+}
+async function extractZIP(bytes){
+  const files={};
+  const toProc=[];
+  let i=0;
+  while(i<bytes.length-4){
+    if(bytes[i]===0x50&&bytes[i+1]===0x4B&&bytes[i+2]===0x03&&bytes[i+3]===0x04){
+      const fnLen=bytes[i+26]|(bytes[i+27]<<8);
+      const extLen=bytes[i+28]|(bytes[i+29]<<8);
+      const compSize=bytes[i+18]|(bytes[i+19]<<8)|(bytes[i+20]<<16)|(bytes[i+21]<<24);
+      const meth=bytes[i+8]|(bytes[i+9]<<8);
+      const fname=new TextDecoder().decode(bytes.slice(i+30,i+30+fnLen));
+      const dStart=i+30+fnLen+extLen;
+      const comp=bytes.slice(dStart,dStart+compSize);
+      if(fname.endsWith('.xml')) toProc.push({fname,meth,comp});
+      i=dStart+compSize;
+    } else i++;
+  }
+  for(const{fname,meth,comp} of toProc){
+    try{
+      if(meth===0){ files[fname]=new TextDecoder().decode(comp); }
+      else {
+        const ds=new DecompressionStream('deflate-raw');
+        const w=ds.writable.getWriter();
+        await w.write(comp); await w.close();
+        const chunks=[]; const reader=ds.readable.getReader();
+        while(true){ const{done,value}=await reader.read(); if(done)break; chunks.push(value); }
+        let tot2=0; chunks.forEach(c=>tot2+=c.length);
+        const merged=new Uint8Array(tot2); let off=0;
+        chunks.forEach(c=>{merged.set(c,off);off+=c.length;});
+        files[fname]=new TextDecoder().decode(merged);
+      }
+    }catch(e){}
+  }
+  return files;
+}
+function parseSharedStrings(xml){
+  const doc=new DOMParser().parseFromString(xml,'text/xml');
+  return Array.from(doc.querySelectorAll('si')).map(s=>s.textContent||'');
+}
+function parseSheet(xml,ss){
+  const doc=new DOMParser().parseFromString(xml,'text/xml');
+  const allRows=[];
+  doc.querySelectorAll('row').forEach(row=>{
+    const rObj={};
+    row.querySelectorAll('c').forEach(cell=>{
+      const ref=cell.getAttribute('r');
+      const t=cell.getAttribute('t');
+      const vEl=cell.querySelector('v');
+      const inl=cell.querySelector('is > t');
+      let val='';
+      if(inl) val=inl.textContent;
+      else if(vEl){ if(t==='s') val=ss[parseInt(vEl.textContent)]||''; else val=vEl.textContent; }
+      const col=ref.replace(/[0-9]/g,'');
+      rObj[colIdx(col)]=val;
+    });
+    if(Object.keys(rObj).length>0) allRows.push(rObj);
+  });
+  if(allRows.length<2) return {rows:[],headers:[]};
+  const maxCol=Math.max(...allRows.map(r=>Math.max(...Object.keys(r).map(Number))));
+  const rawHdrs=[];
+  for(let c=0;c<=maxCol;c++) rawHdrs.push((allRows[0][c]||`col${c}`).toString().trim());
+  const headers=dedupeHeaders(rawHdrs);
+  const rows = allRows.slice(1).map(rObj=>{
+    const row={};
+    headers.forEach((h,i)=>{ row[h]=(rObj[i]||'').toString().trim(); });
+    return row;
+  }).filter(r=>headers.some(h=>r[h]));
+  return {rows,headers};
+}
+function colIdx(col){
+  let n=0;
+  for(let i=0;i<col.length;i++) n=n*26+(col.charCodeAt(i)-64);
+  return n-1;
+}
+function parseTXT(text){
+  const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
+  if(lines.length<2) return {rows:[],headers:[]};
+  const sample=lines.slice(0,10).join('\n');
+  const tabs=(sample.match(/\t/g)||[]).length,pipes=(sample.match(/\|/g)||[]).length,colons=(sample.match(/:/g)||[]).length;
+  if(colons>lines.length*0.5){
+    const records=[]; let cur={};
+    for(const line of lines){
+      if(!line){ if(Object.keys(cur).length>0){records.push(cur);cur={};} continue; }
+      const[k,...rest]=line.split(':');
+      if(rest.length>0) cur[k.trim()]=rest.join(':').trim();
+    }
+    if(Object.keys(cur).length>0) records.push(cur);
+    if(records.length>0){
+      const headersSet=new Set(); records.forEach(r=>Object.keys(r).forEach(k=>headersSet.add(k)));
+      return {rows:records, headers: dedupeHeaders([...headersSet])};
+    }
+  }
+  const d=tabs>pipes?'\t':'|';
+  const headers=dedupeHeaders(lines[0].split(d).map(h=>h.trim()));
+  const rows = lines.slice(1).map(l=>{ const vals=l.split(d); const row={}; headers.forEach((h,i)=>{row[h]=(vals[i]||'').trim();}); return row; });
+  return {rows,headers};
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   DYNAMIC SCHEMA BUILDER
+   Every header becomes exactly one column. None are ever dropped.
+══════════════════════════════════════════════════════════════════ */
+function buildSchema(rows, headers){
+  const used = new Set(['id','created_at','_import_batch','_raw']);
+  return headers.map(h=>{
+    const values = rows.map(r=>r[h]);
+    const inferred = inferType(values, h);
+    const name = sanitizeIdent(h, used);
+    const nonEmpty = values.filter(v=>v!=null && String(v).trim()!=='').length;
+    return {
+      source: h,
+      name,
+      type: inferred.type,
+      sqlType: SQL_TYPE[inferred.type],
+      confidence: inferred.confidence,
+      samples: inferred.samples,
+      completeness: rows.length ? Math.round((nonEmpty/rows.length)*100) : 0,
+      action: 'new',          // 'new' | 'match' | 'skip'  (skip = user choice only)
+      matchedExisting: null,
+      matchConfidence: 0,
+    };
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   COLUMN MATCHING ENGINE
+   Fuzzy-matches each discovered column against an existing table's
+   real columns, so re-importing into a table that already has
+   "product_name" correctly recognizes a file column called
+   "Product Name" instead of proposing a duplicate.
+══════════════════════════════════════════════════════════════════ */
+function tokenize(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().split(/\s+/).filter(Boolean); }
+function jaccard(a,b){
+  const A=new Set(a), B=new Set(b);
+  const inter=[...A].filter(x=>B.has(x)).length;
+  const union=new Set([...A,...B]).size;
+  return union ? inter/union : 0;
+}
+function matchColumns(columns, existingCols){
+  if(!existingCols || existingCols.length===0){
+    columns.forEach(c=>{ c.action='new'; c.matchedExisting=null; c.matchConfidence=0; });
+    return;
+  }
+  const existingNorm = existingCols
+    .filter(c=>!['id','created_at','_import_batch','_raw'].includes(c.column_name))
+    .map(c=>({ name:c.column_name, type:c.data_type, tokens: tokenize(c.column_name) }));
+  const claimed = new Set();
+  for(const col of columns){
+    const srcTokens = tokenize(col.source);
+    const normSrc = col.source.toLowerCase().replace(/[^a-z0-9]+/g,'');
+    let best=null, bestScore=0;
+    for(const ex of existingNorm){
+      if(claimed.has(ex.name)) continue;
+      const normEx = ex.name.replace(/[^a-z0-9]+/g,'');
+      let score = 0;
+      if(normSrc===normEx) score = 100;
+      else if(normEx.includes(normSrc)||normSrc.includes(normEx)) score = 80;
+      else score = Math.round(jaccard(srcTokens, ex.tokens)*100);
+      if(score>bestScore){ bestScore=score; best=ex; }
+    }
+    if(best && bestScore>=40){
+      col.action='match'; col.matchedExisting=best.name; col.matchConfidence=bestScore; col.name=best.name;
+      claimed.add(best.name);
+    } else {
+      col.action='new'; col.matchedExisting=null; col.matchConfidence=0;
+    }
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   VALUE COERCION
+   If a value won't coerce cleanly to the column's type, the typed
+   column gets null and an issue is logged — but the ORIGINAL row is
+   always preserved verbatim in `_raw`, so nothing is ever actually
+   lost, even on a bad parse.
+══════════════════════════════════════════════════════════════════ */
+function coerceValue(raw, type){
+  const v = (raw==null) ? '' : String(raw).trim();
+  if(v==='') return {value:null, issue:null};
+  switch(type){
+    case 'integer': {
+      const n=parseInt(v,10);
+      return Number.isFinite(n) && /^-?\d+$/.test(v) ? {value:n, issue:null} : {value:null, issue:`"${v}" isn't a whole number`};
+    }
+    case 'decimal': {
+      const n=parseFloat(v);
+      return Number.isFinite(n) ? {value:n, issue:null} : {value:null, issue:`"${v}" isn't a number`};
+    }
+    case 'boolean': {
+      if(/^(true|yes|y|1)$/i.test(v)) return {value:true, issue:null};
+      if(/^(false|no|n|0)$/i.test(v)) return {value:false, issue:null};
+      return {value:null, issue:`"${v}" isn't a recognizable boolean`};
+    }
+    case 'date': {
+      const d=new Date(v); 
+      if(isNaN(d.getTime())) return {value:null, issue:`"${v}" isn't a recognizable date`};
+      return {value:d.toISOString().slice(0,10), issue:null};
+    }
+    case 'datetime': {
+      const d=new Date(v);
+      if(isNaN(d.getTime())) return {value:null, issue:`"${v}" isn't a recognizable timestamp`};
+      return {value:d.toISOString(), issue:null};
+    }
+    case 'json': {
+      try{ return {value:JSON.parse(v), issue:null}; }catch(e){ return {value:null, issue:`"${v.slice(0,24)}…" isn't valid JSON`}; }
+    }
+    case 'uuid': {
+      return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)
+        ? {value:v.toLowerCase(), issue:null} : {value:null, issue:`"${v}" isn't a valid UUID`};
+    }
+    default: // text, email, phone, url
+      return {value:v, issue:null};
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════════════════ */
+let udm = null;        // the whole universal data model for this session
+let filtRows = [];      // currently filtered/sorted view of udm.records
+let selAll = false;
+const ROW_H = 40, BUF = 18;
+let sortK=null, sortD=1;
+
+/* ══════════════════════════════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════════════════════════════ */
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function yld(){ return new Promise(r=>setTimeout(r,0)); }
+function toast(msg, type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast on '+(type?type+'-toast':'');
+  setTimeout(()=>t.className='toast',3500);
+}
+function setPill(txt,cls=''){
+  const p=document.getElementById('statusPill');
+  p.className='status-pill '+(cls||'');
+  document.getElementById('statusTxt').textContent=txt;
+}
+function uuidv4(){
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c=>{
+    const r=Math.random()*16|0, v=c==='x'?r:(r&0x3|0x8); return v.toString(16);
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   FILE ENTRY
+══════════════════════════════════════════════════════════════════ */
+function handleZoneClick(e){ if(e.target.closest('.browse-btn')||e.target.id==='fileInput') return; document.getElementById('fileInput').click(); }
+function handleDrop(e){ e.preventDefault(); e.currentTarget.classList.remove('drag'); const f=e.dataTransfer.files[0]; if(f) processFile(f); }
+function handleFileSelect(e){ const f=e.target.files[0]; if(f) processFile(f); }
+document.addEventListener('dragover',e=>e.preventDefault());
+document.addEventListener('drop',e=>{ e.preventDefault(); if(document.getElementById('uploadZone').style.display!=='none'){ const f=e.dataTransfer.files[0]; if(f) processFile(f); } });
+
+/* ══════════════════════════════════════════════════════════════════
+   CHAT UI  (unchanged mechanic — narrates whatever the engine found)
+══════════════════════════════════════════════════════════════════ */
+function clearChat(){ document.getElementById('chatWin').innerHTML=''; }
+function setBotStat(txt){ document.getElementById('botStat').innerHTML=`<div class="status-pulse" style="color:var(--orange)"></div><span>${txt}</span>`; }
+async function botMsg(html,delay=0,cls=''){
+  if(delay>0) await wait(delay);
+  const win=document.getElementById('chatWin');
+  const tid='t'+Date.now()+Math.random();
+  const tel=document.createElement('div');
+  tel.id=tid; tel.className='msg typing';
+  tel.innerHTML=`<div class="m-ava">🤖</div><div class="m-body"><div class="m-text"><div class="dots"><span></span><span></span><span></span></div></div></div>`;
+  win.appendChild(tel); win.scrollTop=win.scrollHeight;
+  await wait(Math.min(700,180+html.length*1.2));
+  tel.remove();
+  const el=document.createElement('div'); el.className='msg';
+  el.innerHTML=`<div class="m-ava">🤖</div><div class="m-body"><div class="m-text ${cls}">${html.replace(/\n/g,'<br>')}</div><div class="m-time">${new Date().toLocaleTimeString()}</div></div>`;
+  win.appendChild(el); win.scrollTop=win.scrollHeight;
+}
+function userMsg(txt){
+  const win=document.getElementById('chatWin');
+  const el=document.createElement('div'); el.className='msg user-msg';
+  el.innerHTML=`<div class="m-body"><div class="m-text">${esc(txt)}</div></div>`;
+  win.appendChild(el); win.scrollTop=win.scrollHeight;
+}
+function addCbtns(labels,handlers){
+  const win=document.getElementById('chatWin');
+  const wrap=document.createElement('div'); wrap.className='cbtns';
+  labels.forEach((lbl,i)=>{
+    const btn=document.createElement('button'); btn.className='cbtn'; btn.textContent=lbl;
+    btn.onclick=()=>{wrap.remove();handlers[i]();};
+    wrap.appendChild(btn);
+  });
+  win.appendChild(wrap); win.scrollTop=win.scrollHeight;
+}
+function addProg(){
+  const win=document.getElementById('chatWin');
+  const id='p'+Date.now()+Math.round(Math.random()*1000);
+  const el=document.createElement('div'); el.style.marginLeft='38px'; el.id=id;
+  el.innerHTML=`<div class="prog-wrap"><div class="prog-fill" id="${id}f" style="width:0%"></div></div><div class="prog-lbl" id="${id}l">0%</div>`;
+  win.appendChild(el); win.scrollTop=win.scrollHeight;
+  return id;
+}
+function updProg(id,pct){
+  const f=document.getElementById(id+'f'); const l=document.getElementById(id+'l');
+  if(f) f.style.width=pct+'%'; if(l) l.textContent=pct+'%';
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MAIN PROCESS — parse → classify → infer schema → render
+══════════════════════════════════════════════════════════════════ */
+async function processFile(file){
+  if(file.size>150*1024*1024){ toast('❌ File >150MB. Please split it first.','err'); return; }
+  document.getElementById('uploadZone').style.display='none';
+  document.getElementById('botPanel').className='bot-panel on';
+  document.getElementById('startOverBtn').style.display='block';
+  setPill('Analysing...','active');
+  setBotStat('Reading file...');
+  clearChat();
+  const t0=Date.now();
+  const ab=await file.arrayBuffer();
+  const bytes=new Uint8Array(ab);
+  const enc=detectEnc(bytes);
+  let text='';
+  try{ text=new TextDecoder(enc).decode(bytes); }catch(e){ text=new TextDecoder('utf-8',{fatal:false}).decode(bytes); }
+  if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+  const fmt=detectFmt(bytes,text,file.name);
+  const sizeFmt=file.size>1024*1024?(file.size/1024/1024).toFixed(1)+'MB':Math.round(file.size/1024)+'KB';
+  await botMsg(`📂 File received: <code>${esc(file.name)}</code> (${sizeFmt})`);
+  await wait(250);
+  await botMsg(`🔍 Format: <code>${fmt}</code> · Encoding: <code>${enc.toUpperCase()}</code>`);
+  await wait(200);
+  let parsed=null, parseErr=null;
+  try{
+    if(fmt==='XLSX') parsed=await parseXLSX(ab);
+    else if(fmt==='JSON') parsed=parseJSON(text);
+    else if(fmt==='XML') parsed=parseXML(text);
+    else if(['CSV','TSV','CSV_SEMI','CSV_PIPE'].includes(fmt)) parsed=parseCSV(text,fmt);
+    else parsed=parseTXT(text);
+  }catch(e){ parseErr=e.message; }
+  if(parseErr || !parsed || !parsed.rows || parsed.rows.length===0){
+    await botMsg(`❌ Could not parse this file. ${parseErr||'No data rows found.'}<br>If it's an unusual export, try saving as plain CSV and re-uploading.`,'','err');
+    addCbtns(['↺ Try Again'],[startOver]);
+    setPill('Parse Error'); setBotStat('Error'); return;
+  }
+  const {rows, headers} = parsed;
+  await botMsg(`📊 Structure: <b>TABULAR</b> · <b>${headers.length}</b> columns · <b>${rows.length}</b> rows`);
+  await wait(250);
+  await botMsg(`🧠 Columns found: ${headers.map(h=>`<code>${esc(h)}</code>`).join(' · ')}`);
+  await wait(300);
+
+  const dataset = classifyDataset(headers);
+  await botMsg(dataset.type==='generic'
+    ? `🧬 This doesn't match a dataset shape I recognize strongly — treating it as <b>generic</b> data. Every column will still be imported.`
+    : `🧬 This looks like a <b>${dataset.type}</b> dataset (${dataset.confidence}% confidence) based on the column names.`);
+
+  const columns = buildSchema(rows, headers);
+  const avgConf = Math.round(columns.reduce((a,c)=>a+c.confidence,0)/Math.max(columns.length,1));
+  await botMsg(`🔗 Inferred a type for every column — average type-detection confidence: <b>${avgConf}%</b>`);
+
+  const parseMs = Date.now()-t0;
+  udm = {
+    metadata:{fileName:file.name, fileSize:file.size, fmt, parseMs, rowCount:rows.length, colCount:headers.length, avgConf},
+    dataset, rawRows: rows, columns,
+    tableName: suggestTableName(dataset.type, headers),
+    tableExists: null, existingColumns: null,
+    records: [], qr: null,
+    importBatch: uuidv4(),
+  };
+
+  showDatasetSection();
+  showMapping();
+  setBotStat('Awaiting DB check'); setPill('Ready to map','active');
+  await botMsg(`📋 Suggested table: <code>${esc(udm.tableName)}</code>. Adjust it if you'd rather use a different name, then click <b>Check Database</b> so I can see whether it already exists.`);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   DATASET / TABLE NAME UI
+══════════════════════════════════════════════════════════════════ */
+function showDatasetSection(){
+  document.getElementById('datasetSection').style.display='block';
+  document.getElementById('datasetIcon').textContent = udm.dataset.icon;
+  document.getElementById('datasetType').textContent = udm.dataset.type;
+  document.getElementById('datasetConf').textContent = udm.dataset.confidence>0 ? `${udm.dataset.confidence}% confidence` : 'low confidence';
+  document.getElementById('datasetSub').textContent = `${udm.metadata.colCount} columns · ${udm.metadata.rowCount} rows · parsed in ${udm.metadata.parseMs}ms`;
+  document.getElementById('tableNameInput').value = udm.tableName;
+  document.getElementById('tableCheckBanner').className='conn-banner';
+}
+function onTableNameEdit(){
+  const used=new Set();
+  udm.tableName = sanitizeIdent(document.getElementById('tableNameInput').value || 'imported_data', used);
+  udm.tableExists=null; udm.existingColumns=null;
+  document.getElementById('tableCheckBanner').className='conn-banner';
+}
+
+async function checkDatabase(){
+  if (!IDENTITY) { toast('❌ No session — open this tool from the Library Management System.', 'err'); return; }
+  const banner=document.getElementById('tableCheckBanner');
+  banner.className='conn-banner testing show';
+  banner.innerHTML=`<div class="status-pulse"></div><span>Checking whether <code>${esc(udm.tableName)}</code> exists…</span>`;
+  try{
+    // Table-exists and get-columns are credential-agnostic (same fn name both paths),
+    // but admin branch omits p_school_code/p_password via billanRpc
+    const exists = await billanRpc('import_engine_table_exists', 'import_engine_table_exists', { p_table: udm.tableName });
+    udm.tableExists = exists;
+    if(exists){
+      const cols = await billanRpc('import_engine_get_columns', 'import_engine_get_columns', { p_table: udm.tableName });
+      udm.existingColumns = cols;
+      matchColumns(udm.columns, cols);
+      banner.className='conn-banner ok show';
+      banner.innerHTML=`<span>✓ <code>${esc(udm.tableName)}</code> exists with ${cols.length} columns — matching your file's columns against it now.</span>`;
+      await botMsg(`✅ Table <code>${esc(udm.tableName)}</code> already exists (${cols.length} columns). I matched your file's columns against it below — anything unmatched will be added as a new column.`,0,'ok');
+    } else {
+      matchColumns(udm.columns, null);
+      banner.className='conn-banner ok show';
+      banner.innerHTML=`<span>＋ <code>${esc(udm.tableName)}</code> doesn't exist yet — it'll be created with all ${udm.columns.length} columns.</span>`;
+      await botMsg(`＋ No table called <code>${esc(udm.tableName)}</code> yet — I'll create it fresh with all ${udm.columns.length} discovered columns.`);
+    }
+  }catch(e){
+    udm.tableExists=null;
+    banner.className='conn-banner fail show';
+    banner.innerHTML=`<span>✗ Couldn't check: ${esc(e.message)}</span>`;
+    toast('❌ '+e.message,'err');
+    return;
+  }
+  showMapping();
+  showDdlPreview();
+
+  // NEW-COLUMN APPROVAL FLOW — intercept before normalizing if new columns exist
+  const newCols = udm.columns.filter(c => c.action === 'new');
+  if (newCols.length > 0) {
+    renderNewColumnApproval(newCols);
+  } else {
+    // No new columns — go straight to normal import button flow
+    pendingColumnDecision = 'approved';
+    await finalizeNormalization();
+    proceedToImportButton();
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MAPPING UI
+══════════════════════════════════════════════════════════════════ */
+function showMapping(){
+  document.getElementById('mapSection').style.display='block';
+  const tbody=document.getElementById('mapBody'); tbody.innerHTML='';
+  const counts={match:0,new:0,skip:0,review:0};
+  for(const col of udm.columns){
+    const cc = col.action==='match' ? (col.matchConfidence>=70?'c-hi':col.matchConfidence>=40?'c-md':'c-lo')
+             : col.confidence>=85?'c-hi':col.confidence>=50?'c-md':col.confidence>0?'c-lo':'c-na';
+    const confVal = col.action==='match' ? col.matchConfidence : col.confidence;
+    const needsReview = col.action==='match' && col.matchConfidence<70;
+    if(needsReview) counts.review++; else counts[col.action===''?'skip':col.action]++;
+    const samples = col.samples.slice(0,3).map(v=>esc(String(v).slice(0,18))).join(', ')||'—';
+    const typeClr = {integer:'var(--blue)',decimal:'var(--blue)',boolean:'var(--purple)',date:'var(--orange)',datetime:'var(--orange)',uuid:'var(--green)',email:'var(--green)',url:'var(--green)',json:'var(--purple)'}[col.type]||'var(--text3)';
+
+    const options = [];
+    options.push(`<option value="__new__"${col.action==='new'?' selected':''}>+ Create new: ${esc(col.name)}</option>`);
+    if(udm.existingColumns){
+      for(const ec of udm.existingColumns){
+        if(['id','created_at','_import_batch','_raw'].includes(ec.column_name)) continue;
+        options.push(`<option value="${esc(ec.column_name)}"${col.action==='match'&&col.matchedExisting===ec.column_name?' selected':''}>↳ ${esc(ec.column_name)}</option>`);
+      }
+    }
+    options.push(`<option value="__skip__"${col.action==='skip'?' selected':''}>✕ Skip this column</option>`);
+
+    const badge = col.action==='skip' ? `<span class="action-badge action-skip">SKIP</span>`
+      : needsReview ? `<span class="action-badge action-review">REVIEW</span>`
+      : col.action==='match' ? `<span class="action-badge action-match">MATCH</span>`
+      : `<span class="action-badge action-new">NEW</span>`;
+
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td><span class="src-tag">${esc(col.source)}</span></td>
+      <td class="arrow-cell">→</td>
+      <td><select class="map-sel" data-col="${esc(col.source)}" onchange="updateMap(this)">${options.join('')}</select></td>
+      <td><div class="c-bar-wrap"><div class="c-bar"><div class="c-fill ${cc}" style="width:${confVal}%"></div></div><span class="c-pct">${confVal>0?confVal+'%':'—'}</span></div></td>
+      <td><span style="font-family:var(--mono);font-size:11px;color:${typeClr}">${col.type}</span></td>
+      <td style="color:var(--text3);font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${samples}</td>
+      <td>${badge}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+  const setChip=(id,n,label)=>{ const el=document.getElementById(id); if(n>0){el.style.display='';el.textContent=`${n} ${label}`;} else el.style.display='none'; };
+  setChip('mapMatch',counts.match,'matched');
+  setChip('mapNew',counts.new,'new');
+  setChip('mapReview',counts.review,'need review');
+  setChip('mapSkip',counts.skip,'skipped');
+}
+function updateMap(sel){
+  const col = udm.columns.find(c=>c.source===sel.dataset.col);
+  if(!col) return;
+  const used = new Set(udm.columns.filter(c=>c!==col).map(c=>c.name));
+  if(sel.value==='__new__'){
+    col.action='new'; col.matchedExisting=null; col.matchConfidence=0;
+    col.name = sanitizeIdent(col.source, used);
+  } else if(sel.value==='__skip__'){
+    col.action='skip'; col.matchedExisting=null; col.matchConfidence=100;
+  } else {
+    col.action='match'; col.matchedExisting=sel.value; col.matchConfidence=100; col.name=sel.value;
+  }
+  showMapping(); showDdlPreview();
+  finalizeNormalization();
+  toast(`Remapped "${col.source}"`);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   NEW-COLUMN APPROVAL WORKFLOW
+   Single combined Approve / Deny decision for all new columns.
+   No per-column controls — one batch decision covers everything.
+══════════════════════════════════════════════════════════════════ */
+let pendingColumnDecision = null; // 'approved' | 'denied' | null
+
+function renderNewColumnApproval(newCols) {
+  pendingColumnDecision = null;
+  // Disable the import button until decision is made
+  const importBtn = document.getElementById('importBtn');
+  importBtn.disabled = true;
+  importBtn.textContent = '⏳ Awaiting new-column decision…';
+
+  const panel = document.getElementById('newColApprovalPanel');
+  const colItems = newCols.map(c => {
+    const samples = (c.samples || []).slice(0, 3).map(v => esc(String(v).slice(0, 22))).join(', ') || '—';
+    return `<div class="new-col-item">
+      <div style="flex:1">
+        <div class="new-col-name">${esc(c.name)}</div>
+        <div class="new-col-type">SQL type: <span style="color:var(--orange)">${esc(c.sqlType)}</span> · inferred as <span style="color:var(--blue)">${esc(c.type)}</span></div>
+        <div class="new-col-samples">Samples: ${samples}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  panel.innerHTML = `<div class="new-col-panel">
+    <div class="new-col-panel-title">🆕 ${newCols.length} New Column${newCols.length>1?'s':''} Detected</div>
+    <div class="new-col-panel-sub">These columns don't exist yet in <code style="color:var(--orange);font-family:var(--mono)">${esc(udm.tableName)}</code>. Approve to add them to the database schema, or skip to import only the already-matched columns.</div>
+    <div class="new-col-list">${colItems}</div>
+    <div class="new-col-actions">
+      <button class="btn-approve" onclick="approveNewColumns()">✅ Add these columns and continue</button>
+      <button class="btn-deny" onclick="denyNewColumns()">⏭ Skip these columns and continue</button>
+    </div>
+  </div>`;
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function approveNewColumns() {
+  pendingColumnDecision = 'approved';
+  document.getElementById('newColApprovalPanel').style.display = 'none';
+  finalizeNormalization().then(() => proceedToImportButton());
+}
+
+function denyNewColumns() {
+  // Mark every 'new' column as 'skip' — don't block the import, just drop these fields
+  udm.columns.filter(c => c.action === 'new').forEach(c => { c.action = 'skip'; });
+  pendingColumnDecision = 'denied';
+  document.getElementById('newColApprovalPanel').style.display = 'none';
+  showMapping(); showDdlPreview();
+  finalizeNormalization().then(() => proceedToImportButton());
+  toast('ℹ New columns skipped — importing existing matched columns only.');
+}
+
+function proceedToImportButton() {
+  const importBtn = document.getElementById('importBtn');
+  const sel = getSelRecords();
+  importBtn.disabled = sel.length === 0 || !udm.tableName || udm.tableExists === null;
+  importBtn.textContent = `🚀 Import ${sel.length} Records to Database`;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   IMPORT HISTORY / DATABASE BROWSER
+══════════════════════════════════════════════════════════════════ */
+let historyOpen = false;
+
+function toggleHistoryPanel() {
+  historyOpen = !historyOpen;
+  const body = document.getElementById('historyBody');
+  const arrow = document.getElementById('histToggleArrow');
+  body.className = historyOpen ? 'history-body open' : 'history-body';
+  arrow.textContent = historyOpen ? '▲ collapse' : '▼ expand';
+  if (historyOpen && IDENTITY?.schoolId) loadImportHistory();
+}
+
+async function loadImportHistory() {
+  if (!IDENTITY?.schoolId) return;
+  const emptyEl = document.getElementById('histEmpty');
+  const tbl = document.getElementById('histTbl');
+  emptyEl.textContent = 'Loading history…';
+  emptyEl.style.display = 'block';
+  tbl.style.display = 'none';
+  try {
+    let data;
+    if (IDENTITY.identityType === 'admin') {
+      // Admin: direct PostgREST — RLS (tenant_isolation_import) already
+      // scopes this to their own school via auth.uid(). No table-level
+      // access exists for anon, so this path only ever runs with a real
+      // Supabase Auth session attached.
+      const r = await fetch(
+        `${SB_URL}/rest/v1/import_log?school_id=eq.${encodeURIComponent(IDENTITY.schoolId)}&order=created_at.desc&limit=100`,
+        { headers: sbHeaders() }
+      );
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      data = await r.json();
+    } else {
+      // Staff: credentialed RPC — anon has zero direct table grants,
+      // so this is the only path that can reach import_log for them.
+      data = await sbRpc('staff_get_import_log', {
+        p_school_code: IDENTITY.schoolCode,
+        p_password: IDENTITY.password
+      });
+    }
+    renderImportHistory(data || []);
+  } catch(e) {
+    emptyEl.textContent = 'Could not load import history: ' + e.message;
+  }
+}
+
+function renderImportHistory(rows) {
+  const emptyEl = document.getElementById('histEmpty');
+  const tbl = document.getElementById('histTbl');
+  const tbody = document.getElementById('histBody');
+  const chip = document.getElementById('histChip');
+  if (!rows.length) {
+    emptyEl.textContent = 'No import history yet for this school.';
+    emptyEl.style.display = 'block';
+    tbl.style.display = 'none';
+    chip.style.display = 'none';
+    return;
+  }
+  chip.textContent = rows.length + ' entries';
+  chip.style.display = '';
+  emptyEl.style.display = 'none';
+  tbl.style.display = 'table';
+  tbody.innerHTML = rows.map(row => {
+    const actionClass = row.action?.includes('insert') ? 'hist-action-ok'
+      : row.action?.includes('denied') ? 'hist-action-warn' : 'hist-action-info';
+    const when = row.created_at ? new Date(row.created_at).toLocaleString() : '—';
+    const batchId = row.batch_id || row._import_batch || row.import_batch || '—';
+    const batchShort = typeof batchId === 'string' && batchId.length > 8 ? batchId.slice(0,8)+'…' : batchId;
+    return `<tr>
+      <td>${esc(row.table_name||'—')}</td>
+      <td class="${actionClass}">${esc(row.action||'—')}</td>
+      <td>${row.row_count ?? '—'}</td>
+      <td title="${esc(batchId)}">${esc(batchShort)}</td>
+      <td>${esc(when)}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   DDL PREVIEW
+══════════════════════════════════════════════════════════════════ */
+function highlightSQL(sql){
+  return esc(sql).replace(/\b(CREATE TABLE|ALTER TABLE|ADD COLUMN|IF NOT EXISTS|PRIMARY KEY|NOT NULL|DEFAULT)\b/g,'<span class="kw">$1</span>');
+}
+function planDDL(){
+  const newCols = udm.columns.filter(c=>c.action==='new');
+  const stmts=[];
+  if(udm.tableExists===false){
+    const colLines = newCols.map(c=>`  ${c.name.padEnd(24)} ${c.sqlType}`).join(',\n');
+    stmts.push(`-- new table\nCREATE TABLE public.${udm.tableName} (\n  id            bigint  PRIMARY KEY GENERATED ALWAYS AS IDENTITY,\n  created_at    timestamptz NOT NULL DEFAULT now(),\n  _import_batch text,\n  _raw          jsonb${colLines?',\n'+colLines:''}\n);`);
+  } else if(udm.tableExists===true && newCols.length>0){
+    stmts.push(`-- adding ${newCols.length} missing column${newCols.length>1?'s':''} to public.${udm.tableName}`);
+    newCols.forEach(c=> stmts.push(`ALTER TABLE public.${udm.tableName} ADD COLUMN IF NOT EXISTS ${c.name} ${c.sqlType};`));
+  } else if(udm.tableExists===true){
+    stmts.push(`-- public.${udm.tableName} already has every column this file needs. No schema changes required.`);
+  } else {
+    stmts.push(`-- click "Check Database" above to see what will change`);
+  }
+  return stmts.join('\n\n');
+}
+function showDdlPreview(){
+  document.getElementById('ddlSection').style.display='block';
+  document.getElementById('ddlBox').innerHTML = highlightSQL(planDDL());
+  const newCount = udm.columns.filter(c=>c.action==='new').length;
+  document.getElementById('ddlChip').textContent = udm.tableExists===false ? 'creates 1 table' : newCount>0 ? `adds ${newCount} column${newCount>1?'s':''}` : 'no changes needed';
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   NORMALIZATION — turns raw rows into typed records per the current
+   mapping. Re-run any time the mapping changes.
+══════════════════════════════════════════════════════════════════ */
+async function finalizeNormalization(){
+  await wait(50);
+  const active = udm.columns.filter(c=>c.action!=='skip');
+  const records=[];
+  const rowHashes=new Map();
+  let dupCount=0;
+  for(let i=0;i<udm.rawRows.length;i++){
+    const raw = udm.rawRows[i];
+    const rec = {_status:'ok', _issues:[], _rowIndex:i+1};
+    for(const col of active){
+      const {value, issue} = coerceValue(raw[col.source], col.type);
+      rec[col.name]=value;
+      if(issue){ rec._issues.push(`${col.source}: ${issue}`); if(rec._status==='ok') rec._status='warn'; }
+    }
+    if(active.length>0 && active.every(col=>rec[col.name]===null||rec[col.name]==='')){
+      rec._status='error'; rec._issues.push('Row is entirely empty across mapped columns');
+    }
+    const hash = JSON.stringify(active.map(c=>rec[c.name]));
+    if(rowHashes.has(hash)){ dupCount++; rec._dup=true; if(rec._status==='ok') rec._status='warn'; rec._issues.push('Looks like a duplicate of row '+rowHashes.get(hash)); }
+    else rowHashes.set(hash, i+1);
+    records.push(rec);
+  }
+  udm.records = records;
+  udm.qr = buildQR(records, dupCount);
+  filtRows=[...records];
+  renderAfterNormalize();
+}
+function buildQR(records, dupCount){
+  const ok=records.filter(r=>r._status==='ok').length;
+  const warn=records.filter(r=>r._status==='warn').length;
+  const err=records.filter(r=>r._status==='error').length;
+  const completeness = Math.round(udm.columns.filter(c=>c.action!=='skip').reduce((a,c)=>a+c.completeness,0)/Math.max(udm.columns.filter(c=>c.action!=='skip').length,1));
+  return {total:records.length, ok, warn, err, dupCount, fixed:records.filter(r=>r._issues.length>0).length, completeness};
+}
+
+function renderAfterNormalize(){
+  document.getElementById('statsBar').style.display='grid';
+  document.getElementById('st-total').textContent=udm.records.length;
+  document.getElementById('st-ok').textContent=udm.qr.ok;
+  document.getElementById('st-warn').textContent=udm.qr.warn;
+  document.getElementById('st-err').textContent=udm.qr.err;
+  document.getElementById('st-time').textContent=udm.metadata.parseMs+'ms';
+  document.getElementById('st-cols').textContent=udm.columns.filter(c=>c.action!=='skip').length+'/'+udm.columns.length;
+  showPreview();
+  showQualReport();
+  document.getElementById('actBar').className='act-bar on';
+  updActBar();
+  setBotStat('Complete ✓'); setPill('Ready to Import','done');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   VIRTUAL TABLE — columns are built dynamically from udm.columns,
+   never a fixed book-shaped list.
+══════════════════════════════════════════════════════════════════ */
+function activeCols(){ return udm.columns.filter(c=>c.action!=='skip'); }
+function tblColDefs(){
+  return [
+    {k:'_cb', lbl:'', w:42},
+    {k:'_no', lbl:'#', w:50},
+    {k:'_st', lbl:'Status', w:70},
+    ...activeCols().map(c=>({k:c.name, lbl:c.name, w:Math.max(90,Math.min(220,c.name.length*9+50))})),
+    {k:'_iss', lbl:'Issues', w:200},
+  ];
+}
+function showPreview(){
+  document.getElementById('prevSection').style.display='block';
+  filtRows=[...udm.records];
+  const defs = tblColDefs();
+  const head=document.getElementById('virtHead');
+  head.innerHTML = defs.map(c=>{
+    const style=`width:${c.w}px`;
+    if(c.k==='_cb') return `<div class="th" style="${style}"><input type="checkbox" id="selAllCb" class="row-cb" onchange="selAllCb(this)"></div>`;
+    return `<div class="th" style="${style}" onclick="sortBy('${c.k}')">${esc(c.lbl)}<span id="si_${c.k}"></span></div>`;
+  }).join('');
+  updCounts();
+  renderVirt();
+}
+function updCounts(){
+  const records=udm.records;
+  document.getElementById('prevCount').textContent=`${udm.qr.ok} ready`;
+  const wc=document.getElementById('warnChip'), ec=document.getElementById('errChip');
+  if(udm.qr.warn>0){wc.textContent=`${udm.qr.warn} warnings`;wc.style.display='';}else wc.style.display='none';
+  if(udm.qr.err>0){ec.textContent=`${udm.qr.err} skipped`;ec.style.display='';}else ec.style.display='none';
+  document.getElementById('visCount').textContent=filtRows.length;
+  document.getElementById('totCount').textContent=records.length;
+}
+function renderVirt(){
+  if(!udm) return;
+  const sc=document.getElementById('virtScroll');
+  const rw=document.getElementById('rowsWrap');
+  const st=document.getElementById('spTop');
+  const sb=document.getElementById('spBot');
+  const total=filtRows.length;
+  const scrollTop=sc.scrollTop;
+  const visH=sc.clientHeight||440;
+  const vStart=Math.max(0,Math.floor(scrollTop/ROW_H)-BUF);
+  const vEnd=Math.min(total,Math.ceil((scrollTop+visH)/ROW_H)+BUF);
+  st.style.height=(vStart*ROW_H)+'px';
+  sb.style.height=((total-vEnd)*ROW_H)+'px';
+  rw.innerHTML='';
+  const defs=tblColDefs();
+  for(let i=vStart;i<vEnd;i++){
+    const r=filtRows[i]; if(!r) continue;
+    const iss=(r._issues||[]).join('; ')||'—';
+    const row=document.createElement('div');
+    row.className=`virt-row ${r._status}${r._sel?' sel':''}`;
+    row.innerHTML = defs.map(c=>{
+      const style=`width:${c.w}px`;
+      if(c.k==='_cb') return `<div class="td" style="${style}"><input type="checkbox" class="row-cb"${r._sel?' checked':''} onchange="toggleRow(${i},this)"></div>`;
+      if(c.k==='_no') return `<div class="td" style="${style};color:var(--text3);font-family:var(--mono);font-size:10px">${r._rowIndex}</div>`;
+      if(c.k==='_st') return `<div class="td" style="${style}">${r._status==='ok'?'<div class="s-ok"></div>':r._status==='warn'?'<div class="s-wn"></div>':'<div class="s-er"></div>'}</div>`;
+      if(c.k==='_iss') return `<div class="td" style="${style};color:${iss==='—'?'var(--text3)':'var(--amber)'};font-size:10.5px" title="${esc(iss)}">${esc(iss.slice(0,40)+(iss.length>40?'…':''))}</div>`;
+      const v=r[c.k];
+      const cls = v===null ? 'td t-null' : 'td';
+      return `<div class="${cls}" style="${style}" ondblclick="editTd(this,${i},'${esc(c.k)}')">${v===null?'null':esc(String(v))}</div>`;
+    }).join('');
+    rw.appendChild(row);
+  }
+}
+function editTd(td,idx,field){
+  const r=filtRows[idx]; if(!r) return;
+  const cur=r[field]==null?'':r[field];
+  td.classList.add('editing'); td.innerHTML='';
+  const inp=document.createElement('input'); inp.value=cur;
+  td.appendChild(inp); inp.focus(); inp.select();
+  const save=()=>{
+    const col=activeCols().find(c=>c.name===field);
+    if(col){ const {value}=coerceValue(inp.value,col.type); r[field]=value; }
+    else r[field]=inp.value;
+    td.classList.remove('editing'); renderVirt(); updActBar();
+  };
+  inp.onblur=save;
+  inp.onkeydown=e=>{ if(e.key==='Enter')save(); if(e.key==='Escape'){renderVirt();} };
+}
+function toggleRow(i,cb){ const r=filtRows[i]; if(r) r._sel=cb.checked; updActBar(); }
+function selAllCb(cb){ filtRows.forEach(r=>r._sel=cb.checked); selAll=cb.checked; renderVirt(); updActBar(); }
+function toggleAll(){
+  selAll=!selAll;
+  filtRows.forEach(r=>r._sel=selAll);
+  const cb=document.getElementById('selAllCb'); if(cb) cb.checked=selAll;
+  renderVirt(); updActBar();
+}
+function filterTable(){
+  if(!udm) return;
+  const q=document.getElementById('srch').value.toLowerCase();
+  const sf=document.getElementById('statusFlt').value;
+  filtRows=udm.records.filter(r=>{
+    if(sf!=='all'&&r._status!==sf) return false;
+    if(q){
+      const hay=activeCols().map(c=>r[c.name]).join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  document.getElementById('visCount').textContent=filtRows.length;
+  document.getElementById('virtScroll').scrollTop=0;
+  renderVirt();
+}
+function sortBy(k){
+  if(sortK===k) sortD*=-1; else{sortK=k;sortD=1;}
+  document.querySelectorAll('[id^="si_"]').forEach(el=>el.textContent='');
+  const el=document.getElementById('si_'+k); if(el) el.textContent=sortD===1?' ↑':' ↓';
+  filtRows.sort((a,b)=>(String(a[k]??'')).localeCompare(String(b[k]??''),undefined,{numeric:true})*sortD);
+  renderVirt();
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   QUALITY REPORT
+══════════════════════════════════════════════════════════════════ */
+function showQualReport(){
+  document.getElementById('qualSection').style.display='block';
+  const qr=udm.qr;
+  const items=[
+    {l:'Total Rows',v:qr.total,c:'qv-or'},{l:'✅ Ready',v:qr.ok,c:'qv-gr'},
+    {l:'⚠ Warnings',v:qr.warn,c:'qv-yw'},{l:'❌ Skipped',v:qr.err,c:'qv-re'},
+    {l:'🔁 Duplicate Rows',v:qr.dupCount,c:'qv-yw'},{l:'🔧 Auto-fixed Issues',v:qr.fixed,c:'qv-yw'},
+    {l:'📈 Avg Completeness',v:qr.completeness+'%',c:'qv-bl'},{l:'🧬 Columns Mapped',v:`${activeCols().length}/${udm.columns.length}`,c:'qv-bl'},
+  ];
+  document.getElementById('qGrid').innerHTML=items.map(i=>`<div class="q-item"><div class="q-lbl">${i.l}</div><div class="q-val ${i.c}">${i.v}</div></div>`).join('');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ACTION BAR
+══════════════════════════════════════════════════════════════════ */
+function getSelRecords(){
+  if(!udm) return [];
+  const sel=filtRows.filter(r=>r._sel&&r._status!=='error');
+  return sel.length>0?sel:udm.records.filter(r=>r._status!=='error');
+}
+function updActBar(){
+  const sel=getSelRecords();
+  document.getElementById('actCount').textContent=`${sel.length} records selected`;
+  const btn=document.getElementById('importBtn');
+  // Block import until new-column decision has been made (if any new cols existed)
+  const decisionBlocking = pendingColumnDecision === null && udm && udm.tableExists !== null
+    && udm.columns.some(c => c.action === 'new');
+  if (decisionBlocking) {
+    btn.textContent='⏳ Awaiting new-column decision…';
+    btn.disabled = true;
+  } else {
+    btn.textContent=`🚀 Import ${sel.length} Records to Database`;
+    btn.disabled = sel.length===0 || !udm.tableName || udm.tableExists===null;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   IMPORT PIPELINE
+   1. ensure table exists (RPC, only if missing)
+   2. add any missing columns (RPC, only if needed)
+   3. batch insert / upsert via PostgREST, chunked, with retries
+══════════════════════════════════════════════════════════════════ */
+function closeModal(){ document.getElementById('modal').className='modal-overlay'; }
+function dbLog(msg, type=''){
+  const log=document.getElementById('dbLog');
+  const line=document.createElement('div');
+  line.className='db-log-line'+(type?' '+type:'');
+  line.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;
+  log.appendChild(line); log.scrollTop=log.scrollHeight;
+}
+
+async function showImportModal(){
+  const records=getSelRecords();
+  const modal=document.getElementById('modal');
+  const info=document.getElementById('modalInfo');
+  const newCols = udm.columns.filter(c=>c.action==='new').length;
+
+  document.getElementById('dbProgress').style.display='none';
+  document.getElementById('dbLog').innerHTML='';
+  document.getElementById('failedRowsBtn').style.display='none';
+  document.getElementById('modalConfirmBtn').disabled=true;
+  document.getElementById('modalConfirmBtn').textContent='⏳ Testing connection…';
+  document.getElementById('modalConfirmBtn').style.background='';
+
+  const upsertRow=document.getElementById('upsertRow');
+  const candidateKey = udm.columns.find(c=>c.action!=='skip' && /(^id$|_id$|sku|isbn|email|code)/i.test(c.name));
+  if(candidateKey){
+    upsertRow.style.display='flex';
+    document.getElementById('upsertKeyLbl').textContent=candidateKey.name;
+    udm._upsertKey = candidateKey.name;
+  } else { upsertRow.style.display='none'; udm._upsertKey=null; }
+
+  const banner=document.getElementById('modalConnBanner');
+  const bannerTxt=document.getElementById('modalConnTxt');
+  banner.className='conn-banner testing show';
+  bannerTxt.textContent='Testing connection to Supabase…';
+
+  info.innerHTML=`
+    <div class="modal-row"><span class="modal-key">Source File</span><span class="modal-val">${esc(udm.metadata.fileName)}</span></div>
+    <div class="modal-row"><span class="modal-key">Target Table</span><span class="modal-val">public.${esc(udm.tableName)}</span></div>
+    <div class="modal-row"><span class="modal-key">Records to Import</span><span class="modal-val" style="color:var(--orange)">${records.length}</span></div>
+    <div class="modal-row"><span class="modal-key">Schema Changes</span><span class="modal-val">${udm.tableExists===false?'create table':newCols>0?`add ${newCols} column(s)`:'none needed'}</span></div>
+  `;
+
+  const cols = activeCols();
+  const prev=document.getElementById('dbPreview');
+  const sample=records.slice(0,5);
+  prev.innerHTML=`<table>
+    <tr>${cols.map(c=>`<th>${esc(c.name)}</th>`).join('')}</tr>
+    ${sample.map(r=>`<tr>${cols.map(c=>`<td>${esc(String(r[c.name]??'').slice(0,25))}</td>`).join('')}</tr>`).join('')}
+    ${records.length>5?`<tr><td colspan="${cols.length}" style="color:var(--text3);text-align:center;padding:6px">… and ${records.length-5} more rows</td></tr>`:''}
+  </table>`;
+
+  modal.className='modal-overlay show';
+  await wait(100);
+  const connOk = await pingSupabase(false);
+  if(connOk){
+    banner.className='conn-banner ok show';
+    bannerTxt.textContent='✓ Connected to Supabase';
+    document.getElementById('modalConfirmBtn').disabled=false;
+    document.getElementById('modalConfirmBtn').textContent=`✅ Confirm & Import ${records.length} Records`;
+  } else {
+    banner.className='conn-banner fail show';
+    bannerTxt.textContent='✗ Cannot reach Supabase. Check network / project URL and try again.';
+    document.getElementById('modalConfirmBtn').disabled=false;
+    document.getElementById('modalConfirmBtn').textContent='⚠ Retry Anyway';
+  }
+}
+
+async function ensureSchema(){
+  // Only process columns that are approved (action === 'new' and decision was approved)
+  const newCols = udm.columns.filter(c=>c.action==='new').map(c=>({name:c.name, type:c.sqlType}));
+
+  // Always call ensure_table, even when the table already exists. It's
+  // idempotent server-side: it creates the table if missing, and — for a
+  // table that already existed before the AI Import engine ever touched it
+  // (students, books, book_issues) — backfills the engine's own bookkeeping
+  // columns (_import_batch, _raw) if they're not there yet. Skipping this
+  // call whenever the table already had every *user* column is what let
+  // rows get inserted against a table missing _raw, causing
+  // "column _raw of relation ... does not exist".
+  dbLog(`Checking schema for public.${udm.tableName}…`,'info');
+  await billanRpc('import_engine_ensure_table', 'import_engine_ensure_table_admin', {p_table: udm.tableName, p_columns: newCols});
+  udm.tableExists = true;
+
+  if(newCols.length>0){
+    dbLog(`Adding ${newCols.length} missing column(s) to public.${udm.tableName}…`,'info');
+    await billanRpc('import_engine_add_columns', 'import_engine_add_columns_admin', {p_table: udm.tableName, p_columns: newCols});
+    dbLog(`✓ Columns added`);
+  } else {
+    dbLog(`No new columns needed — public.${udm.tableName} is ready.`,'info');
+  }
+}
+
+async function postBatch(payload, attempt=1){
+  const upsert = document.getElementById('upsertChk').checked && udm._upsertKey;
+  const url = upsert
+    ? `${SB_URL}/rest/v1/${udm.tableName}?on_conflict=${udm._upsertKey}`
+    : `${SB_URL}/rest/v1/${udm.tableName}`;
+  const prefer = upsert ? 'return=minimal,resolution=merge-duplicates' : 'return=minimal';
+  try{
+    const resp = await fetch(url, { method:'POST', headers: sbHeaders({'Prefer':prefer}), body: JSON.stringify(payload) });
+    if(resp.status===200||resp.status===201||resp.status===204) return {ok:true};
+    let errMsg=`HTTP ${resp.status}`;
+    try{ const ej=JSON.parse(await resp.text()); errMsg=`[${ej.code||resp.status}] ${ej.message||ej.hint||''}`; }catch(e){}
+    if(resp.status>=500 && attempt<3){ await wait(400*attempt); return postBatch(payload, attempt+1); }
+    return {ok:false, error:errMsg, status:resp.status};
+  }catch(e){
+    if(attempt<3){ await wait(400*attempt); return postBatch(payload, attempt+1); }
+    return {ok:false, error:e.message};
+  }
+}
+
+async function executeImport(){
+  const records=getSelRecords();
+  if(!records.length){ toast('No records to import','err'); return; }
+  const btn=document.getElementById('modalConfirmBtn');
+  btn.disabled=true; btn.textContent='⏳ Importing…';
+  document.getElementById('dbProgress').style.display='block';
+  const fill=document.getElementById('dbProgFill');
+  const lbl=document.getElementById('dbProgLbl');
+  document.getElementById('dbLog').innerHTML='';
+
+  dbLog(`Starting import of ${records.length} records → public.${udm.tableName}`,'info');
+
+  try{
+    await ensureSchema();
+  }catch(e){
+    dbLog(`✗ Schema setup failed: ${e.message}`,'err');
+    dbLog('  → If this is "function not found", run supabase_setup.sql in the SQL Editor first.','warn');
+    btn.disabled=false; btn.textContent='✗ Schema setup failed — Retry';
+    toast('❌ Schema setup failed: '+e.message,'err');
+    return;
+  }
+
+  const cols = activeCols();
+  const payload = records.map(r=>{
+    // NEVER include school_id — the DB layer injects it from validated identity
+    const row={ _import_batch: udm.importBatch, _raw: udm.rawRows[r._rowIndex-1] ?? null };
+    cols.forEach(c=>{ row[c.name]=r[c.name]; });
+    return row;
+  });
+
+  const BATCH=500;
+  let done=0; const failedRecords=[];
+  for(let i=0;i<payload.length;i+=BATCH){
+    const batch=payload.slice(i,i+BATCH);
+    const batchNum=Math.ceil((i+1)/BATCH);
+    const result = await insertBatch(batch);
+    if(result.ok){
+      done+=batch.length;
+      dbLog(`✓ Batch ${batchNum} (${batch.length} rows) saved`);
+    } else {
+      dbLog(`✗ Batch ${batchNum} failed: ${result.error}`,'err');
+      if(result.status===401||result.status===403) dbLog('  → Check RLS policies: the relevant role may need INSERT permission','warn');
+      else if(result.status===409) dbLog('  → Conflict — try enabling upsert with a unique key column','warn');
+      else if(result.status===422) dbLog('  → Unprocessable data — a value may not match its column type','warn');
+      failedRecords.push(...records.slice(i,i+BATCH));
+    }
+    const pct=Math.min(100,Math.round(((i+BATCH)/payload.length)*100));
+    fill.style.width=pct+'%';
+    lbl.textContent=`${Math.min(i+BATCH,payload.length)} / ${payload.length} records`;
+    await yld();
+  }
+  fill.style.width='100%';
+
+  if(failedRecords.length===0){
+    dbLog(`🎉 Success! All ${done} records saved to public.${udm.tableName}.`);
+    btn.textContent='✅ Done!'; btn.style.background='var(--green)'; btn.style.color='#000';
+    toast(`🎉 ${done} records imported!`,'ok');
+    setPill('Imported ✓','done');
+    document.getElementById('dbBadge').style.display='flex';
+    // Refresh history panel after successful import
+    if (IDENTITY?.schoolId) loadImportHistory();
+  } else {
+    udm._failedRecords = failedRecords;
+    dbLog(`⚠ Finished: ${done} saved, ${failedRecords.length} failed.`,'warn');
+    btn.disabled=false;
+    btn.textContent = failedRecords.length===records.length ? '✗ All Failed — Retry' : `⚠ Partial (${done}/${records.length}) — Retry remaining`;
+    document.getElementById('failedRowsBtn').style.display='block';
+    toast(`⚠ ${done} imported, ${failedRecords.length} failed`,'err');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   EXPORTS — JSON / CSV adapt to whatever columns exist; Schema SQL
+   ships the exact DDL so the user can run it by hand if preferred.
+══════════════════════════════════════════════════════════════════ */
+function csvQ(v){ const s=String(v??''); return(s.includes(',')||s.includes('"')||s.includes('\n'))?`"${s.replace(/"/g,'""')}"`:s; }
+function dl(blob,name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); }
+
+function dlJSON(){
+  const records=getSelRecords(); const cols=activeCols();
+  const payload={
+    importMeta:{engineVersion:'3.0-universal', importedAt:new Date().toISOString(), sourceFile:udm.metadata.fileName, table:udm.tableName, total:records.length, columns:cols.map(c=>c.name)},
+    records: records.map(r=>{ const o={}; cols.forEach(c=>o[c.name]=r[c.name]); return o; })
+  };
+  dl(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}), `${udm.tableName}.json`);
+  toast('⬇ JSON downloaded!');
+}
+function dlCSV(){
+  const records=getSelRecords(); const cols=activeCols();
+  const lines=[cols.map(c=>c.name).join(','), ...records.map(r=>cols.map(c=>csvQ(r[c.name])).join(','))];
+  dl(new Blob([lines.join('\n')],{type:'text/csv'}), `${udm.tableName}.csv`);
+  toast('⬇ CSV downloaded!');
+}
+function dlSchemaSQL(){
+  const sql = `-- Generated by BILLAN AI Universal Import Engine\n-- Source: ${udm.metadata.fileName}\n\n${planDDL().replace(/<[^>]+>/g,'')}\n`;
+  dl(new Blob([sql],{type:'text/plain'}), `${udm.tableName}_schema.sql`);
+  toast('⬇ Schema SQL downloaded!');
+}
+function dlFailedRows(){
+  if(!udm._failedRecords || !udm._failedRecords.length){ toast('No failed rows to download','err'); return; }
+  const cols=activeCols();
+  const lines=[cols.map(c=>c.name).join(','), ...udm._failedRecords.map(r=>cols.map(c=>csvQ(r[c.name])).join(','))];
+  dl(new Blob([lines.join('\n')],{type:'text/csv'}), `${udm.tableName}_failed_rows.csv`);
+  toast('⬇ Failed rows downloaded!');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   RESET
+══════════════════════════════════════════════════════════════════ */
+function startOver(){
+  udm=null; filtRows=[]; selAll=false; sortK=null; sortD=1;
+  pendingColumnDecision = null;
+  document.getElementById('uploadZone').style.display='block';
+  document.getElementById('botPanel').className='bot-panel';
+  ['datasetSection','mapSection','ddlSection','prevSection','qualSection'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('statsBar').style.display='none';
+  document.getElementById('actBar').className='act-bar';
+  document.getElementById('startOverBtn').style.display='none';
+  document.getElementById('dbBadge').style.display='none';
+  document.getElementById('fileInput').value='';
+  document.getElementById('newColApprovalPanel').style.display='none';
+  document.getElementById('newColApprovalPanel').innerHTML='';
+  const srch=document.getElementById('srch'); if(srch) srch.value='';
+  closeModal(); clearChat();
+  setPill('Ready','');
+}
+
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
+</script>
+
+</body>
+</html>

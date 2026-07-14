@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 🛡️ NUCLEAR CACHE BUSTING FOR THE PORTAL ITSELF -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    
+    <title>BILLAN · Launcher</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0c1e3e;
+            --gold: #c9a227;
+            --gold2: #e6bb44;
+            --rust: #c2410c;
+            --text: #fafaf9;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            background-image: radial-gradient(ellipse at 15% 50%, rgba(201, 162, 39, .1) 0%, transparent 60%);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 20px;
+        }
+        .portal-box {
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+            padding: 40px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(201, 162, 39, .15);
+            border-radius: 20px;
+            box-shadow: 0 32px 80px rgba(0,0,0,.6);
+        }
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.2rem;
+            margin-bottom: 6px;
+            background: linear-gradient(90deg, #fff, var(--gold2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        p.sub {
+            color: rgba(255,255,255,.5);
+            margin-bottom: 28px;
+            letter-spacing: .5px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+        .portal-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 15px;
+            background: rgba(255,255,255,.04);
+            border: 1px solid rgba(255,255,255,.06);
+            border-radius: 12px;
+            color: #fff;
+            text-decoration: none;
+            transition: all 0.25s ease;
+            font-weight: 600;
+        }
+        .portal-btn:hover {
+            transform: translateY(-4px);
+            background: var(--rust);
+            border-color: var(--rust);
+            box-shadow: 0 8px 24px rgba(194,65,12,.4);
+        }
+        .portal-btn span {
+            font-size: 12px;
+            font-weight: 400;
+            color: rgba(255,255,255,.4);
+            margin-top: 4px;
+        }
+        .portal-btn:hover span {
+            color: #fff;
+        }
+        .note {
+            margin-top: 30px;
+            font-size: 13px;
+            color: rgba(255,255,255,.3);
+            background: rgba(255,255,255,.03);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,.04);
+        }
+        .note code { color: var(--gold2); background: rgba(0,0,0,.3); padding: 2px 6px; border-radius: 4px; }
+        @media (max-width: 500px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="portal-box">
+        <h1>🚀 BILLAN LAUNCHER</h1>
+        <p class="sub">Zero-Cache Entry Point for the Ecosystem</p>
+
+        <div class="grid" id="portal-grid">
+            <!-- 🛡️ CACHE BUSTING INJECTION -->
+            <noscript>
+                <a class="portal-btn" href="billan-monitor.html" target="_blank" rel="noopener noreferrer">
+                    🛡️ System Monitor
+                    <span>Super Admin Panel</span>
+                </a>
+                <a class="portal-btn" href="ds.html" target="_blank" rel="noopener noreferrer">
+                    📊 Monitor Hub
+                    <span>Org Admin Dashboard</span>
+                </a>
+                <a class="portal-btn" href="index.html" target="_blank" rel="noopener noreferrer">
+                    📚 Library System
+                    <span>Staff & Admin Operations</span>
+                </a>
+                <a class="portal-btn" href="file-detector-ai.html" target="_blank" rel="noopener noreferrer">
+                    🤖 AI Import Engine
+                    <span>Universal Data Importer</span>
+                </a>
+            </noscript>
+        </div>
+
+        <div class="note" id="portal-note">
+            ⚡ Loading cache-bust status…
+        </div>
+
+        <script>
+            (function () {
+                // ---- 1. Real, active cache clearing (not just a URL trick) ----
+                // Everything here is same-origin-scoped by the browser itself: this page
+                // can only clear Cache Storage / Service Workers / Storage / cookies that
+                // belong to ITS OWN origin. If billan-monitor.html, ds.html, index.html and
+                // file-detector-ai.html are served from the same origin as this launcher
+                // (e.g. same domain/GitHub Pages site), this actually wipes their shared
+                // storage too — which is what fixes "stuck login" / stale iframe issues.
+                // It cannot reach into a different origin; no script anywhere can, by design
+                // of the browser's same-origin policy.
+                async function clearAllCaches() {
+                    const report = { cacheStorage: 0, serviceWorkers: 0, indexedDB: 0, cookies: 0, storage: false };
+
+                    // Cache Storage API (what service workers / PWAs use to cache assets)
+                    if (window.caches && caches.keys) {
+                        try {
+                            const keys = await caches.keys();
+                            await Promise.all(keys.map(k => caches.delete(k)));
+                            report.cacheStorage = keys.length;
+                        } catch (e) { /* ignore */ }
+                    }
+
+                    // Unregister any Service Workers controlling this origin
+                    if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+                        try {
+                            const regs = await navigator.serviceWorker.getRegistrations();
+                            await Promise.all(regs.map(r => r.unregister()));
+                            report.serviceWorkers = regs.length;
+                        } catch (e) { /* ignore */ }
+                    }
+
+                    // IndexedDB databases for this origin
+                    if (window.indexedDB && indexedDB.databases) {
+                        try {
+                            const dbs = await indexedDB.databases();
+                            await Promise.all(dbs.map(db => new Promise(res => {
+                                if (!db.name) return res();
+                                const req = indexedDB.deleteDatabase(db.name);
+                                req.onsuccess = req.onerror = req.onblocked = () => res();
+                            })));
+                            report.indexedDB = dbs.length;
+                        } catch (e) { /* ignore */ }
+                    }
+
+                    // localStorage / sessionStorage for this origin
+                    try { localStorage.clear(); sessionStorage.clear(); report.storage = true; } catch (e) { /* ignore */ }
+
+                    // Non-HttpOnly cookies reachable from JS, expired across common paths
+                    try {
+                        const cookies = document.cookie.split(';');
+                        cookies.forEach(c => {
+                            const name = c.split('=')[0].trim();
+                            if (!name) return;
+                            document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+                            document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=' + location.pathname;
+                        });
+                        report.cookies = cookies.filter(Boolean).length;
+                    } catch (e) { /* ignore */ }
+
+                    return report;
+                }
+
+                // ---- 2. Build the launcher grid ----
+                const links = [
+                    { href: 'billan-monitor.html', icon: '🛡️', label: 'System Monitor', sub: 'Super Admin Panel' },
+                    { href: 'ds.html', icon: '📊', label: 'Monitor Hub', sub: 'Org Admin Dashboard' },
+                    { href: 'index.html', icon: '📚', label: 'Library System', sub: 'Staff & Admin Operations' },
+                    { href: 'file-detector-ai.html', icon: '🤖', label: 'AI Import Engine', sub: 'Universal Data Importer' }
+                ];
+
+                const grid = document.getElementById('portal-grid');
+                grid.innerHTML = links.map(function (l, i) {
+                    return '<a class="portal-btn" href="' + l.href + '" data-target="' + l.href + '" id="link-' + i + '" rel="noopener noreferrer">'
+                        + l.icon + ' ' + l.label
+                        + '<span>' + l.sub + '</span>'
+                        + '</a>';
+                }).join('');
+
+                // ---- 3. Intercept clicks: clear caches FIRST, then navigate with a fresh token ----
+                grid.addEventListener('click', function (ev) {
+                    const a = ev.target.closest('a.portal-btn');
+                    if (!a) return;
+                    ev.preventDefault();
+                    if (a.dataset.busy === '1') return;
+                    a.dataset.busy = '1';
+                    const originalHTML = a.innerHTML;
+                    a.innerHTML = '⏳ Clearing caches…';
+
+                    clearAllCaches().then(function () {
+                        const freshToken = Date.now();
+                        window.open(a.dataset.target + '?t=' + freshToken, '_blank', 'noopener,noreferrer');
+                    }).finally(function () {
+                        a.innerHTML = originalHTML;
+                        a.dataset.busy = '0';
+                    });
+                });
+
+                // ---- 4. Status note ----
+                const note = document.getElementById('portal-note');
+                note.innerHTML =
+                    '⚡ Clicking a tile first <strong>actively clears</strong> Cache Storage, Service Workers, IndexedDB, ' +
+                    'localStorage/sessionStorage, and reachable cookies for this origin — then opens the page with a fresh ' +
+                    '<code>?t=</code> token so the browser must fetch the latest version.' +
+                    '<br><br>' +
+                    '<span style="color:var(--gold2);font-weight:700;">✅ Use this to fix "stuck" login issues & iframe glitches.</span>' +
+                    '<br><br>' +
+                    '<span style="opacity:.7;">Note: browsers only allow a page to clear storage for its own origin — this cannot reach ' +
+                    'a different domain, and it cannot force-evict HttpOnly cookies or the browser\'s low-level disk cache directly. ' +
+                    'The fresh token handles that part.</span>';
+            })();
+        </script>
+    </div>
+</body>
+</html>
