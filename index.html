@@ -2627,12 +2627,34 @@
                 if (!issues || !issues.length) return [];
                 const bookIds = [...new Set(issues.map(i => i.book_id))];
                 const studentIds = [...new Set(issues.map(i => i.student_id))];
-                const [{ data: books, error: bErr }, { data: students, error: sErr }] = await Promise.all([
-                    _sb.from('books').select('*').in('book_id', bookIds),
-                    _sb.from('students').select('*').in('student_id', studentIds),
-                ]);
-                if (bErr) throw bErr;
-                if (sErr) throw sErr;
+                let books, students;
+
+                if (this.isAdmin()) {
+                    const [{ data: b, error: bErr }, { data: s, error: sErr }] = await Promise.all([
+                        _sb.from('books').select('*').in('book_id', bookIds),
+                        _sb.from('students').select('*').in('student_id', studentIds),
+                    ]);
+                    if (bErr) throw bErr;
+                    if (sErr) throw sErr;
+                    books = b; students = s;
+                } else {
+                    // Staff/Librarian never gets a real Supabase Auth session — they
+                    // only ever act through the credential-checked staff_* RPCs. A raw
+                    // _sb.from('books')/_sb.from('students') read here always 401s for
+                    // them, since anon has no direct table grants. Reuse the same RPCs
+                    // the rest of the staff path already uses, then filter client-side.
+                    const [booksRes, studentsRes] = await Promise.all([
+                        _sb.rpc('staff_get_books', { p_school_code: this._sc(), p_password: this._pw() }),
+                        _sb.rpc('staff_get_students', { p_school_code: this._sc(), p_password: this._pw() }),
+                    ]);
+                    if (booksRes.error) throw booksRes.error;
+                    if (studentsRes.error) throw studentsRes.error;
+                    const bookIdSet = new Set(bookIds);
+                    const studentIdSet = new Set(studentIds);
+                    books = (booksRes.data || []).filter(b => bookIdSet.has(b.book_id));
+                    students = (studentsRes.data || []).filter(s => studentIdSet.has(s.student_id));
+                }
+
                 const bookMap = Object.fromEntries((books || []).map(b => [b.book_id, b]));
                 const studentMap = Object.fromEntries((students || []).map(s => [s.student_id, s]));
                 return issues.map(i => ({ ...i, book: bookMap[i.book_id] || null, student: studentMap[i.student_id] || null }));
