@@ -1765,6 +1765,54 @@
                 justify-content: center;
             }
         }
+        /* ═══ SUSPENDED SCHOOL WARNING OVERLAY ═══ */
+        #suspendedOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 999999;
+            align-items: center;
+            justify-content: center;
+            animation: suspendedPulseBg 1.2s ease-in-out infinite;
+        }
+        @keyframes suspendedPulseBg {
+            0%, 100% { background-color: #450a0a; }
+            50% { background-color: #7f1d1d; }
+        }
+        #suspendedOverlay .suspended-box {
+            max-width: 480px;
+            margin: 20px;
+            text-align: center;
+            background: #1a0505;
+            border: 3px solid #ef4444;
+            border-radius: 16px;
+            padding: 40px 32px;
+            box-shadow: 0 0 60px rgba(239,68,68,0.6);
+            animation: suspendedShake 0.4s ease-in-out 2;
+        }
+        @keyframes suspendedShake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-6px); }
+            40% { transform: translateX(6px); }
+            60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
+        }
+        #suspendedOverlay .suspended-icon { font-size: 56px; margin-bottom: 12px; }
+        #suspendedOverlay h1 {
+            color: #fff; font-size: 24px; letter-spacing: 1px;
+            margin: 0 0 14px; text-transform: uppercase;
+        }
+        #suspendedOverlay p { color: #fecaca; font-size: 15px; line-height: 1.6; margin: 0 0 10px; }
+        #suspendedOverlay .suspended-phones {
+            color: #fff; font-weight: 700; font-size: 17px;
+            margin: 14px 0 24px; letter-spacing: 0.5px;
+        }
+        #suspendedOverlay button {
+            background: #fff; color: #7f1d1d; border: none;
+            padding: 12px 28px; border-radius: 8px; font-weight: 700;
+            font-size: 14px; cursor: pointer; transition: transform .15s;
+        }
+        #suspendedOverlay button:hover { transform: scale(1.04); }
     </style>
 </head>
 <body>
@@ -2303,6 +2351,56 @@
             }, delay || 0);
         }
 
+        /* ═══ SUSPENDED SCHOOL WARNING GATE ═══
+           Full-screen red warning + alarm tone, shown whenever a login
+           resolves to "this school has been suspended". Always signs out
+           any partial Supabase Auth session first. */
+        const SuspendedGate = {
+            _audioCtx: null,
+            _sirenTimer: null,
+            _oscRef: null,
+
+            async show() {
+                try { await sb.auth.signOut(); } catch (_) {}
+                document.getElementById('suspendedOverlay').style.display = 'flex';
+                this._playSiren();
+            },
+
+            dismiss() {
+                document.getElementById('suspendedOverlay').style.display = 'none';
+                this._stopSiren();
+            },
+
+            _playSiren() {
+                try {
+                    const Ctx = window.AudioContext || window.webkitAudioContext;
+                    if (!Ctx) return;
+                    this._audioCtx = new Ctx();
+                    const ctx = this._audioCtx;
+                    let up = true;
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    gain.gain.value = 0.15;
+                    osc.connect(gain).connect(ctx.destination);
+                    osc.frequency.setValueAtTime(440, ctx.currentTime);
+                    osc.start();
+                    this._oscRef = osc;
+                    this._sirenTimer = setInterval(() => {
+                        up = !up;
+                        osc.frequency.linearRampToValueAtTime(up ? 880 : 440, ctx.currentTime + 0.4);
+                    }, 450);
+                    setTimeout(() => this._stopSiren(), 6000);
+                } catch (e) { console.warn('Siren playback failed (non-blocking):', e); }
+            },
+
+            _stopSiren() {
+                if (this._sirenTimer) { clearInterval(this._sirenTimer); this._sirenTimer = null; }
+                if (this._oscRef) { try { this._oscRef.stop(); } catch (_) {} this._oscRef = null; }
+                if (this._audioCtx) { try { this._audioCtx.close(); } catch (_) {} this._audioCtx = null; }
+            }
+        };
+
         /* ══ INIT ══ */
         async function init() {
             sb = window.supabase.createClient(SB_URL, SB_KEY);
@@ -2417,11 +2515,21 @@
                 // (they have no single home school), so skip the lookup for them.
                 if (adminData.school_id) {
                     const { data: schoolData, error: schoolErr } = await sb.from('schools')
-                        .select('name, school_code')
+                        .select('name, school_code, is_active')
                         .eq('id', adminData.school_id)
                         .maybeSingle();
                     if (schoolErr) console.warn('schools lookup warning:', schoolErr.message);
                     adminData.schools = schoolData || null;
+
+                    // A suspended school locks out its Org Admin here too (Super Admins,
+                    // who have no home school_id, are never affected by this check).
+                    if (adminData.role !== 'super_admin' && schoolData && schoolData.is_active === false) {
+                        user = null;
+                        currentSession = null;
+                        await SuspendedGate.show();
+                        showAuth();
+                        return null;
+                    }
                 } else {
                     adminData.schools = null;
                 }
@@ -3626,5 +3734,16 @@ async function launchAdminPortal() {
             }
         }
     </script>
+
+    <div id="suspendedOverlay">
+        <div class="suspended-box">
+            <div class="suspended-icon">🚫</div>
+            <h1>Account Suspended</h1>
+            <p>This school has been suspended by the Super Admin.</p>
+            <p>Please contact our call center for assistance:</p>
+            <div class="suspended-phones">+250 735 139 615 &nbsp;||&nbsp; +250 784 680 801</div>
+            <button id="suspendedDismissBtn" onclick="SuspendedGate.dismiss()">Return to Login</button>
+        </div>
+    </div>
 </body>
 </html>
