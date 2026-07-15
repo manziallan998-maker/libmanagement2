@@ -1473,6 +1473,54 @@
             color: var(--crimson);
             font-size: .82rem;
         }
+        /* ═══ SUSPENDED SCHOOL WARNING OVERLAY ═══ */
+        #suspendedOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 999999;
+            align-items: center;
+            justify-content: center;
+            animation: suspendedPulseBg 1.2s ease-in-out infinite;
+        }
+        @keyframes suspendedPulseBg {
+            0%, 100% { background-color: #450a0a; }
+            50% { background-color: #7f1d1d; }
+        }
+        #suspendedOverlay .suspended-box {
+            max-width: 480px;
+            margin: 20px;
+            text-align: center;
+            background: #1a0505;
+            border: 3px solid #ef4444;
+            border-radius: 16px;
+            padding: 40px 32px;
+            box-shadow: 0 0 60px rgba(239,68,68,0.6);
+            animation: suspendedShake 0.4s ease-in-out 2;
+        }
+        @keyframes suspendedShake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-6px); }
+            40% { transform: translateX(6px); }
+            60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
+        }
+        #suspendedOverlay .suspended-icon { font-size: 56px; margin-bottom: 12px; }
+        #suspendedOverlay h1 {
+            color: #fff; font-size: 24px; letter-spacing: 1px;
+            margin: 0 0 14px; text-transform: uppercase;
+        }
+        #suspendedOverlay p { color: #fecaca; font-size: 15px; line-height: 1.6; margin: 0 0 10px; }
+        #suspendedOverlay .suspended-phones {
+            color: #fff; font-weight: 700; font-size: 17px;
+            margin: 14px 0 24px; letter-spacing: 0.5px;
+        }
+        #suspendedOverlay button {
+            background: #fff; color: #7f1d1d; border: none;
+            padding: 12px 28px; border-radius: 8px; font-weight: 700;
+            font-size: 14px; cursor: pointer; transition: transform .15s;
+        }
+        #suspendedOverlay button:hover { transform: scale(1.04); }
     </style>
 </head>
 <body>
@@ -2158,6 +2206,59 @@
             }
         }
 
+                        /* ═══ SUSPENDED SCHOOL WARNING GATE ═══
+           Shared by both login paths (Staff school-code + Admin SSO). Shows
+           a full-screen red warning with an alarm tone whenever a login
+           attempt resolves to "this school has been suspended", and always
+           signs out any partial Supabase Auth session first so nothing is
+           left half-open. */
+        const SuspendedGate = {
+            _audioCtx: null,
+            _sirenTimer: null,
+            _oscRef: null,
+
+            async show() {
+                try { await _sb.auth.signOut(); } catch (_) {}
+                document.getElementById('suspendedOverlay').style.display = 'flex';
+                this._playSiren();
+            },
+
+            dismiss() {
+                document.getElementById('suspendedOverlay').style.display = 'none';
+                this._stopSiren();
+            },
+
+            _playSiren() {
+                try {
+                    const Ctx = window.AudioContext || window.webkitAudioContext;
+                    if (!Ctx) return;
+                    this._audioCtx = new Ctx();
+                    const ctx = this._audioCtx;
+                    let up = true;
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    gain.gain.value = 0.15;
+                    osc.connect(gain).connect(ctx.destination);
+                    osc.frequency.setValueAtTime(440, ctx.currentTime);
+                    osc.start();
+                    this._oscRef = osc;
+                    this._sirenTimer = setInterval(() => {
+                        up = !up;
+                        osc.frequency.linearRampToValueAtTime(up ? 880 : 440, ctx.currentTime + 0.4);
+                    }, 450);
+                    // Auto-stop after 6s in case dismiss is missed.
+                    setTimeout(() => this._stopSiren(), 6000);
+                } catch (e) { console.warn('Siren playback failed (non-blocking):', e); }
+            },
+
+            _stopSiren() {
+                if (this._sirenTimer) { clearInterval(this._sirenTimer); this._sirenTimer = null; }
+                if (this._oscRef) { try { this._oscRef.stop(); } catch (_) {} this._oscRef = null; }
+                if (this._audioCtx) { try { this._audioCtx.close(); } catch (_) {} this._audioCtx = null; }
+            }
+        };
+
                         /* ─── SSO Auto‑Login (Org Admin path — from Monitor Hub) ─── */
 
         // Looks up the admins row + school name for an already-authenticated
@@ -2182,10 +2283,15 @@
                 if (adminRow.school_id) {
                     const { data: schoolRow } = await _sb
                         .from('schools')
-                        .select('name, school_code')
+                        .select('name, school_code, is_active')
                         .eq('id', adminRow.school_id)
                         .maybeSingle();
                     if (schoolRow?.name) schoolName = schoolRow.name;
+                    // A suspended school locks out its Org Admin too, same as staff.
+                    if (schoolRow && schoolRow.is_active === false) {
+                        await SuspendedGate.show();
+                        return false;
+                    }
                 }
             } catch (schoolErr) { console.warn('Could not fetch school name (non-blocking):', schoolErr); }
 
@@ -2805,7 +2911,22 @@
                         p_school_code: schoolCode, p_password: password
                     });
                     if (error) throw error;
-                    if (!data || !data.length) throw new Error('Invalid school code or password.');
+                    if (!data || !data.length) {
+                        // Could be a wrong password/inactive user OR a suspended school —
+                        // staff_authenticate deliberately doesn't say which. Ask separately
+                        // (via a narrow RPC that only ever reveals suspended/not) so we can
+                        // show the right screen without leaking anything else.
+                        const { data: suspended } = await _sb.rpc('check_school_suspended', { p_school_code: schoolCode });
+                        if (suspended) {
+                            await SuspendedGate.show();
+                            btn.disabled = false;
+                            btnText.textContent = 'Sign In';
+                            spinner.style.display = 'none';
+                            document.getElementById('loginPassword').value = '';
+                            return;
+                        }
+                        throw new Error('Invalid school code or password.');
+                    }
 
                     const row = data[0];
                     currentUser = {
@@ -4395,5 +4516,16 @@
             }, 100);
         })();
     </script>
+
+    <div id="suspendedOverlay">
+        <div class="suspended-box">
+            <div class="suspended-icon">🚫</div>
+            <h1>Account Suspended</h1>
+            <p>This school has been suspended by the Super Admin.</p>
+            <p>Please contact our call center for assistance:</p>
+            <div class="suspended-phones">+250 735 139 615 &nbsp;||&nbsp; +250 784 680 801</div>
+            <button id="suspendedDismissBtn" onclick="SuspendedGate.dismiss()">Return to Login</button>
+        </div>
+    </div>
 </body>
 </html>
