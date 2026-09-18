@@ -348,6 +348,111 @@
             font-weight: 600;
         }
 
+        /* PORTAL SWITCH — Staff Portal / Librarian Portal */
+        .portal-switch {
+            position: relative;
+            display: flex;
+            background: var(--bg);
+            border: 1px solid var(--border2);
+            border-radius: 999px;
+            padding: 4px;
+            margin-bottom: 26px;
+        }
+        .portal-switch-glider {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: calc(50% - 4px);
+            height: calc(100% - 8px);
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold2) 100%);
+            border-radius: 999px;
+            box-shadow: 0 4px 14px rgba(201, 162, 39, .38);
+            transition: transform .38s cubic-bezier(.65, 0, .35, 1);
+            z-index: 0;
+        }
+        .portal-switch.is-librarian .portal-switch-glider {
+            transform: translateX(100%);
+        }
+        .portal-switch-tab {
+            position: relative;
+            z-index: 1;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 6px;
+            border-radius: 999px;
+            font-family: inherit;
+            font-size: 10.5px;
+            font-weight: 800;
+            letter-spacing: .5px;
+            text-transform: uppercase;
+            color: var(--text2);
+            background: none;
+            border: none;
+            cursor: pointer;
+            transition: color var(--tr);
+        }
+        .portal-switch-tab i {
+            font-size: 14px;
+        }
+        .portal-switch-tab.active {
+            color: var(--navy);
+        }
+        [data-theme="dark"] .portal-switch-tab.active {
+            color: #1a1508;
+        }
+
+        /* LIBRARIAN GATE — modern hand-off screen */
+        .librarian-gate {
+            text-align: center;
+            animation: fadeUp .4s ease both;
+        }
+        .librarian-gate-icon {
+            width: 62px;
+            height: 62px;
+            margin: 2px auto 18px;
+            border-radius: 17px;
+            background: linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%);
+            border: 2px solid var(--gold);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 27px;
+            color: var(--gold2);
+            box-shadow: 0 8px 24px rgba(201, 162, 39, .28);
+        }
+        .librarian-gate-icon i {
+            animation: gatePulse 1.7s ease-in-out infinite;
+        }
+        @keyframes gatePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        .gate-progress-track {
+            width: 100%;
+            height: 5px;
+            border-radius: 99px;
+            background: var(--border2);
+            overflow: hidden;
+            margin: 22px 0 10px;
+        }
+        .gate-progress-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 99px;
+            background: linear-gradient(90deg, var(--gold) 0%, var(--gold2) 100%);
+        }
+        .gate-status {
+            font-size: 12px;
+            color: var(--text2);
+            margin-bottom: 20px;
+        }
+        .gate-status b {
+            color: var(--text);
+            font-weight: 700;
+        }
         /* APP */
         #app {
             display: none;
@@ -1830,6 +1935,11 @@
                 <div class="auth-logo-name">LibraryOS</div>
                 <div class="auth-logo-sub">School Library Management System</div>
             </div>
+            <div class="portal-switch" id="portal-switch">
+                <button type="button" class="portal-switch-tab active" data-portal="staff"><i class="ti ti-shield-check"></i>Staff Portal</button>
+                <button type="button" class="portal-switch-tab" data-portal="librarian"><i class="ti ti-books"></i>Librarian Portal</button>
+                <div class="portal-switch-glider"></div>
+            </div>
             <div id="login-view">
                 <div class="auth-title">Welcome back</div>
                 <div class="auth-sub">Sign in to your account to continue</div>
@@ -1869,6 +1979,17 @@
                 </div>
                 <button class="btn-primary" id="request-btn"><i class="ti ti-send"></i> Submit Request</button>
                 <div class="auth-links">Already have an account? <a id="show-login">Sign in</a></div>
+            </div>
+            <div id="librarian-gate-view" style="display:none;">
+                <div class="librarian-gate">
+                    <div class="librarian-gate-icon"><i class="ti ti-books"></i></div>
+                    <div class="auth-title">Librarian Portal</div>
+                    <div class="auth-sub">Taking you to the Library Management System…</div>
+                    <div class="gate-progress-track"><div class="gate-progress-fill" id="gate-progress-fill"></div></div>
+                    <div class="gate-status">Redirecting in <b id="gate-countdown">3</b>s…</div>
+                    <button class="btn-primary" id="gate-continue-btn"><i class="ti ti-arrow-right"></i> Continue Now</button>
+                    <div class="auth-links"><a id="gate-cancel-link">Stay on Staff Portal instead</a></div>
+                </div>
             </div>
         </div>
     </div>
@@ -2297,6 +2418,55 @@
         /* Target portal URL */
         const PORTAL_URL = "https://manziallan998-maker.github.io/libmanagement2/index.html";
 
+        /* ══ LIBRARIAN PORTAL SWITCH (pre-login) ══ */
+        let gateRedirectTimer = null;
+        let gateTickInterval = null;
+        const GATE_DURATION_MS = 10000;
+
+        function setPortalTab(which) {
+            const sw = $('portal-switch');
+            if (!sw) return;
+            sw.querySelectorAll('.portal-switch-tab').forEach(t => t.classList.toggle('active', t.dataset.portal === which));
+            sw.classList.toggle('is-librarian', which === 'librarian');
+            if (which === 'librarian') {
+                $('login-view').style.display = 'none';
+                $('register-view').style.display = 'none';
+                $('librarian-gate-view').style.display = 'block';
+                startLibrarianGate();
+            } else {
+                stopLibrarianGate();
+                $('librarian-gate-view').style.display = 'none';
+                $('register-view').style.display = 'none';
+                $('login-view').style.display = 'block';
+            }
+        }
+
+        function startLibrarianGate() {
+            stopLibrarianGate();
+            const fill = $('gate-progress-fill');
+            const countdownEl = $('gate-countdown');
+            fill.style.transition = 'none';
+            fill.style.width = '0%';
+            void fill.offsetWidth; // reflow so the transition below actually animates
+            fill.style.transition = `width ${GATE_DURATION_MS}ms linear`;
+            requestAnimationFrame(() => { fill.style.width = '100%'; });
+
+            let remaining = Math.ceil(GATE_DURATION_MS / 1000);
+            countdownEl.textContent = remaining;
+            gateTickInterval = setInterval(() => {
+                remaining -= 1;
+                countdownEl.textContent = Math.max(0, remaining);
+                if (remaining <= 0) clearInterval(gateTickInterval);
+            }, 1000);
+
+            gateRedirectTimer = setTimeout(() => { window.location.href = PORTAL_URL; }, GATE_DURATION_MS);
+        }
+
+        function stopLibrarianGate() {
+            if (gateRedirectTimer) { clearTimeout(gateRedirectTimer); gateRedirectTimer = null; }
+            if (gateTickInterval) { clearInterval(gateTickInterval); gateTickInterval = null; }
+        }
+
         let sb, user, currentSession;
         let adminRow = null;
         let currentSchoolId = null;
@@ -2446,7 +2616,8 @@
 
         /* ══ AUTH ══ */
         function showAuth() { $('auth-screen').style.display = 'flex';
-            $('app').classList.remove('visible'); }
+            $('app').classList.remove('visible');
+            setPortalTab('staff'); }
 
         async function showApp() {
             $('auth-screen').style.display = 'none';
@@ -3648,6 +3819,10 @@ async function launchAdminPortal() {
                 $('register-view').style.display = 'block'; });
             $('show-login').addEventListener('click', () => { $('login-view').style.display = 'block';
                 $('register-view').style.display = 'none'; });
+            document.querySelectorAll('.portal-switch-tab').forEach(t => t.addEventListener('click', () => setPortalTab(t.dataset.portal)));
+            $('gate-continue-btn').addEventListener('click', () => { stopLibrarianGate();
+                window.location.href = PORTAL_URL; });
+            $('gate-cancel-link').addEventListener('click', () => setPortalTab('staff'));
             $('school-switcher-select').addEventListener('change', e => {
                 const id = e.target.value;
                 const s = SCHOOLS_CACHE.find(x => String(x.id) === String(id));
