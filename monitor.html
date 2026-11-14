@@ -3819,6 +3819,10 @@ async function launchAdminPortal() {
                 $('register-view').style.display = 'block'; });
             $('show-login').addEventListener('click', () => { $('login-view').style.display = 'block';
                 $('register-view').style.display = 'none'; });
+            /* landing page "Register your organisation" opens monitor.html#register */
+            const openRegisterFromHash = () => { if (location.hash === '#register' && $('auth-screen') && $('auth-screen').style.display !== 'none') $('show-register').click(); };
+            openRegisterFromHash();
+            window.addEventListener('hashchange', openRegisterFromHash);
             document.querySelectorAll('.portal-switch-tab').forEach(t => t.addEventListener('click', () => setPortalTab(t.dataset.portal)));
             $('gate-continue-btn').addEventListener('click', () => { stopLibrarianGate();
                 window.location.href = PORTAL_URL; });
