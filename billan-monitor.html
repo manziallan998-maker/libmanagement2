@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -413,6 +412,38 @@
   .pg-btn:hover { background: var(--navy4); color: #E2E8F0; }
   .pg-btn:disabled { opacity: .4; cursor: not-allowed; }
   .pg-btn.active { background: var(--gold); color: var(--navy); border-color: var(--gold); font-weight: 700; }
+
+  /* ── CUSTOMERS HUB (inbox · reviews · announcements) ── */
+  .ct-list { display:grid; gap:10px; padding:14px; }
+  .ct-item { display:grid; grid-template-columns:auto 1fr auto; gap:14px; align-items:center; padding:14px 16px; border:1px solid var(--navy3); border-radius:10px; background:var(--navy2); cursor:pointer; transition:all .15s; }
+  .ct-item:hover { border-color:var(--gold); transform:translateY(-1px); }
+  .ct-item.unread { border-left:3px solid var(--gold); background:rgba(212,168,67,.05); }
+  .ct-av { width:40px; height:40px; border-radius:50%; background:var(--navy4); display:grid; place-items:center; font-weight:700; color:var(--gold); }
+  .ct-main { min-width:0; }
+  .ct-main b { color:#fff; font-size:13px; }
+  .ct-main small { color:var(--slate2); margin-left:6px; }
+  .ct-prev { font-size:12px; color:var(--slate); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:3px; }
+  .ct-side { text-align:right; display:grid; gap:6px; justify-items:end; font-size:11px; color:var(--slate2); }
+  .stars-gold { color:var(--gold); letter-spacing:2px; font-size:13px; }
+  .stars-gold .off { color:var(--navy4); }
+  .mf-lbl { display:block; font-size:11px; font-weight:700; color:var(--slate); text-transform:uppercase; letter-spacing:.8px; margin:14px 0 6px; }
+  .mf-in { width:100%; background:var(--navy); border:1px solid var(--navy4); color:#E2E8F0; border-radius:8px; padding:10px 12px; font:inherit; font-size:13px; }
+  .mf-in:focus { outline:none; border-color:var(--gold); }
+  textarea.mf-in { min-height:96px; resize:vertical; }
+  .modal.wide { max-width:760px; }
+  .thread { max-height:64vh; overflow:auto; padding-right:4px; }
+  .bubble { border:1px solid var(--navy3); background:var(--navy); border-radius:10px; padding:12px 14px; margin-bottom:10px; font-size:13px; white-space:pre-wrap; word-break:break-word; color:#E2E8F0; }
+  .bubble.admin { border-color:rgba(212,168,67,.4); background:rgba(212,168,67,.07); }
+  .bubble.note { border-style:dashed; border-color:rgba(139,92,246,.5); background:rgba(139,92,246,.07); }
+  .bubble .who { display:block; font-size:11px; color:var(--slate2); margin-bottom:5px; font-weight:600; }
+  .meta-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin-bottom:12px; }
+  .meta-grid div { background:var(--navy); border:1px solid var(--navy3); border-radius:8px; padding:8px 10px; font-size:12px; color:#E2E8F0; word-break:break-word; }
+  .meta-grid span { display:block; font-size:10px; color:var(--slate2); text-transform:uppercase; letter-spacing:.8px; margin-bottom:2px; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .chk { display:flex; align-items:center; gap:8px; font-size:13px; color:#E2E8F0; margin-top:14px; }
+  .hint-note { font-size:11px; color:var(--slate2); margin-top:6px; }
+  .page-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+  @media (max-width:640px) { .row2 { grid-template-columns:1fr; } .ct-item { grid-template-columns:auto 1fr; } .ct-side { grid-column:1 / -1; justify-items:start; text-align:left; } }
 </style>
 </head>
 <body>
@@ -468,6 +499,20 @@
       </div>
       <div class="nav-item" data-page="schools" onclick="navTo('schools',this)">
         <span class="icon">🏫</span> All Schools
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Customers</div>
+      <div class="nav-item" data-page="inbox" onclick="navTo('inbox',this)">
+        <span class="icon">✉️</span> Inbox
+        <span class="nav-badge" id="inbox-badge" style="display:none">0</span>
+      </div>
+      <div class="nav-item" data-page="reviews" onclick="navTo('reviews',this)">
+        <span class="icon">⭐</span> Reviews &amp; Ratings
+        <span class="nav-badge" id="reviews-badge" style="display:none">0</span>
+      </div>
+      <div class="nav-item" data-page="announcements" onclick="navTo('announcements',this)">
+        <span class="icon">📣</span> Announcements
       </div>
     </div>
     <div class="sidebar-section">
@@ -619,6 +664,42 @@
         </div>
       </div>
 
+      <!-- ═══ INBOX (contact_messages) ═══ -->
+      <div id="page-inbox" class="page">
+        <div class="tabs" id="inbox-tabs">
+          <div class="tab" data-tab="new" onclick="inboxSetTab('new')">New</div>
+          <div class="tab" data-tab="read" onclick="inboxSetTab('read')">Read</div>
+          <div class="tab" data-tab="answered" onclick="inboxSetTab('answered')">Answered</div>
+          <div class="tab" data-tab="archived" onclick="inboxSetTab('archived')">Archived</div>
+          <div class="tab" data-tab="all" onclick="inboxSetTab('all')">All</div>
+        </div>
+        <div class="card"><div class="card-body" style="padding:0;"><div class="ct-list" id="inbox-list"></div></div></div>
+      </div>
+
+      <!-- ═══ REVIEWS (reviews) ═══ -->
+      <div id="page-reviews" class="page">
+        <div id="rev-summary" style="margin-bottom:16px;"></div>
+        <div class="tabs" id="reviews-tabs">
+          <div class="tab" data-tab="pending" onclick="reviewsSetTab('pending')">Pending</div>
+          <div class="tab" data-tab="approved" onclick="reviewsSetTab('approved')">Approved</div>
+          <div class="tab" data-tab="hidden" onclick="reviewsSetTab('hidden')">Hidden</div>
+          <div class="tab" data-tab="all" onclick="reviewsSetTab('all')">All</div>
+        </div>
+        <div class="card"><div class="card-body" style="padding:0;"><div class="ct-list" id="reviews-list"></div></div></div>
+      </div>
+
+      <!-- ═══ ANNOUNCEMENTS (announcements) ═══ -->
+      <div id="page-announcements" class="page">
+        <div class="page-bar">
+          <div style="font-size:13px;color:var(--slate);">What you publish here appears in the <strong style="color:#E2E8F0;">Announcements</strong> section of the landing page.</div>
+          <button class="btn btn-primary" onclick="openAnn()">＋ New announcement</button>
+        </div>
+        <div class="card"><div class="tbl-wrap"><table>
+          <thead><tr><th>Title</th><th>Category</th><th>Status</th><th>Date</th><th></th></tr></thead>
+          <tbody id="ann-tbody"></tbody>
+        </table></div></div>
+      </div>
+
       <!-- ═══ SETTINGS ═══ -->
       <div id="page-settings" class="page">
         <div class="grid2">
@@ -695,6 +776,41 @@
 <!-- ═══ MODALS ═══ -->
 
 <!-- Confirm Generic -->
+<!-- Customers: thread (message or review) -->
+<div class="modal-overlay" id="modal-thread">
+  <div class="modal wide">
+    <div class="modal-hdr"><h3 id="th-title">Conversation</h3><button class="modal-close" onclick="closeModal('modal-thread')">✕</button></div>
+    <div class="modal-body"><div class="thread" id="th-body"></div></div>
+    <div class="modal-footer" id="th-footer"></div>
+  </div>
+</div>
+
+<!-- Customers: announcement editor -->
+<div class="modal-overlay" id="modal-ann">
+  <div class="modal wide">
+    <div class="modal-hdr"><h3 id="ann-title-h">New announcement</h3><button class="modal-close" onclick="closeModal('modal-ann')">✕</button></div>
+    <div class="modal-body">
+      <label class="mf-lbl" style="margin-top:0" for="ann-f-title">Title</label>
+      <input class="mf-in" id="ann-f-title" maxlength="140" placeholder="Short and clear">
+      <label class="mf-lbl" for="ann-f-content">Content</label>
+      <textarea class="mf-in" id="ann-f-content" maxlength="2000" placeholder="What do you want everyone to know?"></textarea>
+      <div class="row2">
+        <div><label class="mf-lbl" for="ann-f-cat">Category</label>
+          <select class="mf-in" id="ann-f-cat"><option value="new">New</option><option value="update">Update</option><option value="notice" selected>Notice</option><option value="event">Event</option><option value="maintenance">Maintenance</option></select></div>
+        <div><label class="mf-lbl" for="ann-f-date">Publish date <span style="text-transform:none;letter-spacing:0;font-weight:500">(empty = now)</span></label>
+          <input class="mf-in" id="ann-f-date" type="datetime-local"></div>
+      </div>
+      <label class="chk"><input type="checkbox" id="ann-f-pub" checked> Published (visible on the landing page)</label>
+      <label class="chk"><input type="checkbox" id="ann-f-pin"> 📌 Pin to the top</label>
+      <div class="hint-note">A future date schedules the announcement: it appears automatically at that time.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-ann')">Cancel</button>
+      <button class="btn btn-primary" id="ann-save-btn" onclick="saveAnn()">Save announcement</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-confirm">
   <div class="modal">
     <div class="modal-hdr">
@@ -918,6 +1034,8 @@ function bootApp() {
   // Load page (fires off the async tasks)
   loadDashboard();
   runChecks();
+  loadCmBadges();
+  setInterval(loadCmBadges, 60000);
 }
 
 /* ══════════════════════════════════════════════════
@@ -925,6 +1043,9 @@ function bootApp() {
 ══════════════════════════════════════════════════ */
 const PAGE_TITLES = {
   dashboard: 'Dashboard',
+  inbox:     'Inbox · Contact Messages',
+  reviews:   'Reviews & Ratings',
+  announcements: 'Announcements',
   requests:  'Registration Requests',
   schools:   'All Schools',
   audit:     'Platform Audit Log',
@@ -941,6 +1062,9 @@ function navTo(page, el) {
   if (page === 'schools')   loadSchools();
   if (page === 'audit')     loadAudit();
   if (page === 'settings')  runChecks();
+  if (page === 'inbox')     loadInbox();
+  if (page === 'reviews')   loadReviews();
+  if (page === 'announcements') loadAnnAdmin();
 }
 function refreshPage() {
   const active = document.querySelector('.nav-item.active')?.dataset?.page;
@@ -1488,7 +1612,7 @@ function timeAgo(dt) {
   return fmtDate(dt);
 }
 function actionLabel(a) {
-  const m = { approve_school:'Approved School', reject_school:'Rejected School', suspend_school:'Suspended School', reactivate_school:'Reactivated School', reset_admin_password:'Reset Password', enter_monitor_hub:'Entered Monitor Hub' };
+  const m = { reply_message:'Replied to message', reply_review:'Replied to review', moderate_review:'Moderated review', save_announcement:'Saved announcement', delete_announcement:'Deleted announcement', delete_message:'Deleted message', approve_school:'Approved School', reject_school:'Rejected School', suspend_school:'Suspended School', reactivate_school:'Reactivated School', reset_admin_password:'Reset Password', enter_monitor_hub:'Entered Monitor Hub' };
   return m[a] || a;
 }
 function actionIcon(a) {
@@ -1520,6 +1644,295 @@ function toast(msg, type='info') {
   el.innerHTML = `<span>${type==='success'?'✓':type==='error'?'✗':'ℹ'}</span><span>${esc(msg)}</span>`;
   document.getElementById('toast-container').appendChild(el);
   setTimeout(() => el.remove(), 4000);
+}
+
+
+/* ══════════════════════════════════════════════════
+   CUSTOMERS HUB  ·  inbox · reviews · announcements
+   Tables: contact_messages, contact_replies, reviews,
+           internal_notes, announcements   (see libraryos-community.sql)
+══════════════════════════════════════════════════ */
+let inboxTab = 'new', reviewsTab = 'pending';
+let cmMsgs = [], cmRevs = [], cmAnns = [];
+let threadCtx = null;           // { kind:'message'|'review', id }
+let annEditId = null;
+const cmById = id => document.getElementById(id);
+const adminLabel = () => (currentAdminRow && (currentAdminRow.full_name || currentAdminRow.email)) || (currentUser && currentUser.email) || 'Admin';
+const initial = n => (n || '?').trim().charAt(0).toUpperCase();
+const SUBJECTS = { general:'General question', register:'Registering an organisation', support:'Help / support', partnership:'Partnership', feedback:'Feedback or idea', other:'Something else' };
+const ANN_BADGE = { new:'badge-green', update:'badge-blue', notice:'badge-amber', event:'badge-purple', maintenance:'badge-red' };
+const MSG_BADGE = { new:'badge-amber', read:'badge-blue', answered:'badge-green', archived:'badge-slate' };
+const REV_BADGE = { pending:'badge-amber', approved:'badge-green', hidden:'badge-slate' };
+
+async function audit(action, detail) {
+  try { await sb.from('platform_audit_log').insert({ actor_id: currentUser.id, actor_label: currentAdminRow.email || currentUser.email, action, detail: detail || {} }); } catch (e) {}
+}
+function cmSkeleton(box) { box.innerHTML = '<div class="skeleton sk-row"></div><div class="skeleton sk-row"></div><div class="skeleton sk-row"></div>'; }
+function cmEmpty(box, icon, text) { box.innerHTML = `<div class="empty-state"><div class="es-icon">${icon}</div><p>${text}</p></div>`; }
+function cmError(box, e) { box.innerHTML = `<div class="empty-state"><div class="es-icon">⚠️</div><p>Could not load: ${esc(e.message || e)}<br><small>Did you run <b>libraryos-community.sql</b> in Supabase, and are you a super_admin?</small></p></div>`; }
+function starsHtml(n) { let h = ''; for (let i = 1; i <= 5; i++) h += i <= n ? '★' : '<span class="off">★</span>'; return `<span class="stars-gold">${h}</span>`; }
+function syncTabs(id, active) { document.querySelectorAll('#' + id + ' .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === active)); }
+
+/* ── badges in the sidebar ── */
+function setBadge(id, n) { const el = cmById(id); if (!el) return; el.textContent = n || 0; el.style.display = n ? '' : 'none'; }
+async function loadCmBadges() {
+  try {
+    const [m, r] = await Promise.all([
+      sb.from('contact_messages').select('id', { count: 'exact', head: true }).eq('status', 'new'),
+      sb.from('reviews').select('id', { count: 'exact', head: true }).eq('status', 'pending')
+    ]);
+    setBadge('inbox-badge', m.count); setBadge('reviews-badge', r.count);
+  } catch (e) {}
+}
+
+/* ───────────── INBOX ───────────── */
+function inboxSetTab(t) { inboxTab = t; loadInbox(); }
+async function loadInbox() {
+  syncTabs('inbox-tabs', inboxTab);
+  const box = cmById('inbox-list'); cmSkeleton(box);
+  let q = sb.from('contact_messages').select('*').order('created_at', { ascending: false }).limit(100);
+  if (inboxTab !== 'all') q = q.eq('status', inboxTab);
+  const { data, error } = await q;
+  if (error) return cmError(box, error);
+  cmMsgs = data || [];
+  if (!cmMsgs.length) return cmEmpty(box, '📭', inboxTab === 'new' ? 'No new messages. All caught up! 🎉' : 'Nothing here.');
+  box.innerHTML = cmMsgs.map(m => `
+    <div class="ct-item ${m.status === 'new' ? 'unread' : ''}" onclick="openMessage('${m.id}')">
+      <div class="ct-av">${esc(initial(m.name))}</div>
+      <div class="ct-main">
+        <div><b>${esc(m.name)}</b><small>${esc(m.email)}${m.organisation ? ' · ' + esc(m.organisation) : ''}</small></div>
+        <div class="ct-prev"><strong style="color:#CBD5E1">${esc(SUBJECTS[m.subject] || m.subject)}</strong> — ${esc(m.message)}</div>
+      </div>
+      <div class="ct-side"><span class="badge ${MSG_BADGE[m.status]}"><span class="dot"></span>${m.status}</span><span>${timeAgo(m.created_at)}</span></div>
+    </div>`).join('');
+}
+
+function bubble(cls, who, text) { return `<div class="bubble ${cls}"><span class="who">${who}</span>${esc(text)}</div>`; }
+
+async function openMessage(id) {
+  const m = cmMsgs.find(x => x.id === id); if (!m) return;
+  threadCtx = { kind: 'message', id };
+  cmById('th-title').textContent = '✉️ ' + (SUBJECTS[m.subject] || 'Message');
+  cmById('th-body').innerHTML = '<div class="skeleton sk-row"></div>';
+  cmById('modal-thread').classList.add('open');
+  if (m.status === 'new') {      // opening it marks it as read
+    m.status = 'read';
+    sb.from('contact_messages').update({ status: 'read', read_at: new Date().toISOString(), handled_by: currentUser.id }).eq('id', id).then(() => { loadCmBadges(); });
+  }
+  await renderMessageThread(m);
+}
+async function renderMessageThread(m) {
+  const [rep, notes] = await Promise.all([
+    sb.from('contact_replies').select('*').eq('message_id', m.id).order('created_at'),
+    sb.from('internal_notes').select('*').eq('target_type', 'message').eq('target_id', m.id).order('created_at')
+  ]);
+  const meta = `<div class="meta-grid">
+    <div><span>From</span>${esc(m.name)}</div><div><span>Email</span>${esc(m.email)}</div>
+    ${m.phone ? `<div><span>Phone</span>${esc(m.phone)}</div>` : ''}${m.organisation ? `<div><span>Organisation</span>${esc(m.organisation)}</div>` : ''}
+    <div><span>Received</span>${fmtDateFull(m.created_at)}</div><div><span>Status</span>${m.status}</div></div>`;
+  let h = meta + bubble('', esc(m.name) + ' wrote', m.message);
+  (rep.data || []).forEach(r => h += bubble('admin', '✉️ ' + esc(r.admin_label || 'Admin') + ' replied · ' + fmtDateFull(r.created_at), r.body));
+  (notes.data || []).forEach(n => h += bubble('note', '🔒 Private note · ' + esc(n.author_label || 'Admin') + ' · ' + timeAgo(n.created_at), n.note));
+  h += `<label class="mf-lbl">Your reply to ${esc(m.name)}</label>
+    <textarea class="mf-in" id="th-reply" placeholder="Write a clear, friendly answer…"></textarea>
+    <div class="hint-note">Saving the reply marks the message as answered and opens your email app with the answer ready to send to ${esc(m.email)}.</div>
+    <label class="mf-lbl">Private note (only admins see this)</label>
+    <textarea class="mf-in" id="th-note" style="min-height:60px" placeholder="Share an idea with your co-admin…"></textarea>
+    <div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="addNote()">🔒 Add private note</button></div>`;
+  cmById('th-body').innerHTML = h;
+  cmById('th-footer').innerHTML = `
+    <button class="btn btn-danger" onclick="confirmDeleteMessage('${m.id}')">Delete</button>
+    <button class="btn btn-ghost" onclick="setMessageStatus('${m.id}','${m.status === 'archived' ? 'read' : 'archived'}')">${m.status === 'archived' ? 'Unarchive' : 'Archive'}</button>
+    <button class="btn btn-primary" onclick="sendMessageReply('${m.id}')">✉️ Save &amp; email reply</button>`;
+}
+async function setMessageStatus(id, status) {
+  const { error } = await sb.from('contact_messages').update({ status, handled_by: currentUser.id }).eq('id', id);
+  if (error) return toast(error.message, 'error');
+  closeModal('modal-thread'); toast('Message ' + status + '.', 'success'); loadInbox(); loadCmBadges();
+}
+async function sendMessageReply(id) {
+  const m = cmMsgs.find(x => x.id === id); const body = cmById('th-reply').value.trim();
+  if (body.length < 2) return toast('Write your reply first.', 'error');
+  const { error } = await sb.from('contact_replies').insert({ message_id: id, body, via: 'email', admin_label: adminLabel() });
+  if (error) return toast('Could not save reply: ' + error.message, 'error');
+  await sb.from('contact_messages').update({ status: 'answered', answered_at: new Date().toISOString(), handled_by: currentUser.id }).eq('id', id);
+  audit('reply_message', { message_id: id });
+  const subject = 'Re: ' + (SUBJECTS[m.subject] || 'Your message to LibraryOS');
+  const text = body + '\n\n— ' + adminLabel() + '\nLibraryOS · Billan Company';
+  toast('Reply saved. Opening your email app…', 'success');
+  window.location.href = 'mailto:' + encodeURIComponent(m.email) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(text);
+  m.status = 'answered'; renderMessageThread(m); loadInbox(); loadCmBadges();
+}
+function confirmDeleteMessage(id) {
+  closeModal('modal-thread');
+  modalConfirmCallback = async () => {
+    const { error } = await sb.from('contact_messages').delete().eq('id', id);
+    closeModal('modal-confirm');
+    if (error) return toast(error.message, 'error');
+    audit('delete_message', { message_id: id }); toast('Message deleted.', 'info'); loadInbox(); loadCmBadges();
+  };
+  cmById('modal-confirm-title').textContent = 'Delete message';
+  cmById('modal-confirm-body').textContent = 'Delete this message and its replies permanently?';
+  cmById('modal-confirm-ok').textContent = 'Yes, delete'; cmById('modal-confirm-ok').className = 'btn btn-danger';
+  cmById('modal-confirm').classList.add('open');
+}
+async function addNote() {
+  if (!threadCtx) return;
+  const note = cmById('th-note').value.trim(); if (!note) return toast('Type a note first.', 'error');
+  const { error } = await sb.from('internal_notes').insert({ target_type: threadCtx.kind, target_id: threadCtx.id, note, author_label: adminLabel() });
+  if (error) return toast(error.message, 'error');
+  toast('Note added.', 'success');
+  if (threadCtx.kind === 'message') renderMessageThread(cmMsgs.find(x => x.id === threadCtx.id));
+  else renderReviewThread(cmRevs.find(x => x.id === threadCtx.id));
+}
+
+/* ───────────── REVIEWS ───────────── */
+function reviewsSetTab(t) { reviewsTab = t; loadReviews(); }
+async function loadReviews() {
+  syncTabs('reviews-tabs', reviewsTab);
+  const box = cmById('reviews-list'); cmSkeleton(box);
+  let q = sb.from('reviews').select('*').order('created_at', { ascending: false }).limit(100);
+  if (reviewsTab !== 'all') q = q.eq('status', reviewsTab);
+  const [{ data, error }, sum] = await Promise.all([q, sb.from('public_review_summary').select('*')]);
+  const s = sum.data && sum.data[0];
+  cmById('rev-summary').innerHTML = s && s.total ? `<div class="card"><div class="card-body" style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
+      <div style="font-size:34px;font-weight:800;color:var(--gold)">${Number(s.avg_rating).toFixed(1)}</div>
+      <div>${starsHtml(Math.round(s.avg_rating))}<div style="font-size:12px;color:var(--slate)">${s.total} approved review${s.total === 1 ? '' : 's'} on the landing page</div></div>
+      <div style="margin-left:auto;font-size:12px;color:var(--slate)">5★ ${s.c5} · 4★ ${s.c4} · 3★ ${s.c3} · 2★ ${s.c2} · 1★ ${s.c1}</div></div></div>` : '';
+  if (error) return cmError(box, error);
+  cmRevs = data || [];
+  if (!cmRevs.length) return cmEmpty(box, '⭐', reviewsTab === 'pending' ? 'No reviews waiting for approval.' : 'Nothing here.');
+  box.innerHTML = cmRevs.map(r => `
+    <div class="ct-item ${r.status === 'pending' ? 'unread' : ''}" onclick="openReview('${r.id}')">
+      <div class="ct-av">${esc(initial(r.name))}</div>
+      <div class="ct-main">
+        <div><b>${esc(r.name)}</b><small>${esc(r.role_label || 'Visitor')}${r.email ? ' · ' + esc(r.email) : ''}</small> &nbsp;${starsHtml(r.rating)}</div>
+        <div class="ct-prev">${esc(r.comment)}</div>
+      </div>
+      <div class="ct-side"><span class="badge ${REV_BADGE[r.status]}"><span class="dot"></span>${r.status}</span>${r.admin_reply ? '<span>💬 replied</span>' : ''}<span>${timeAgo(r.created_at)}</span></div>
+    </div>`).join('');
+}
+async function openReview(id) {
+  threadCtx = { kind: 'review', id };
+  cmById('th-title').textContent = '⭐ Review';
+  cmById('th-body').innerHTML = '<div class="skeleton sk-row"></div>';
+  cmById('modal-thread').classList.add('open');
+  await renderReviewThread(cmRevs.find(x => x.id === id));
+}
+async function renderReviewThread(r) {
+  const notes = await sb.from('internal_notes').select('*').eq('target_type', 'review').eq('target_id', r.id).order('created_at');
+  let h = `<div class="meta-grid"><div><span>From</span>${esc(r.name)} ${r.role_label ? '(' + esc(r.role_label) + ')' : ''}</div><div><span>Email (private)</span>${esc(r.email || '—')}</div><div><span>Rating</span>${starsHtml(r.rating)}</div><div><span>Status</span>${r.status}</div></div>`;
+  h += bubble('', esc(r.name) + ' wrote · ' + fmtDateFull(r.created_at), r.comment);
+  (notes.data || []).forEach(n => h += bubble('note', '🔒 Private note · ' + esc(n.author_label || 'Admin') + ' · ' + timeAgo(n.created_at), n.note));
+  h += `<label class="mf-lbl">Public reply (shown under the review on the landing page)</label>
+    <textarea class="mf-in" id="th-reply" placeholder="Thank them, answer fairly, be specific…">${esc(r.admin_reply || '')}</textarea>
+    <div class="hint-note">Publishing a reply also approves the review if it is still pending.</div>
+    <label class="mf-lbl">Private note (only admins see this)</label>
+    <textarea class="mf-in" id="th-note" style="min-height:60px" placeholder="Share an idea with your co-admin…"></textarea>
+    <div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="addNote()">🔒 Add private note</button></div>`;
+  cmById('th-body').innerHTML = h;
+  cmById('th-footer').innerHTML = `
+    <button class="btn btn-danger" onclick="confirmDeleteReview('${r.id}')">Delete</button>
+    ${r.status === 'hidden' ? '' : `<button class="btn btn-ghost" onclick="setReviewStatus('${r.id}','hidden')">Hide</button>`}
+    ${r.status === 'approved' ? '' : `<button class="btn btn-success" onclick="setReviewStatus('${r.id}','approved')">✓ Approve</button>`}
+    <button class="btn btn-primary" onclick="saveReviewReply('${r.id}')">💬 Publish reply</button>`;
+}
+async function setReviewStatus(id, status) {
+  const { error } = await sb.from('reviews').update({ status }).eq('id', id);
+  if (error) return toast(error.message, 'error');
+  audit('moderate_review', { review_id: id, status });
+  closeModal('modal-thread'); toast('Review ' + status + '.', 'success'); loadReviews(); loadCmBadges();
+}
+async function saveReviewReply(id) {
+  const r = cmRevs.find(x => x.id === id); const text = cmById('th-reply').value.trim();
+  if (!text) return toast('Write a reply first.', 'error');
+  const patch = { admin_reply: text, admin_reply_by: adminLabel(), replied_at: new Date().toISOString() };
+  if (r.status === 'pending') patch.status = 'approved';
+  const { error } = await sb.from('reviews').update(patch).eq('id', id);
+  if (error) return toast(error.message, 'error');
+  audit('reply_review', { review_id: id });
+  closeModal('modal-thread'); toast('Reply published on the landing page.', 'success'); loadReviews(); loadCmBadges();
+}
+function confirmDeleteReview(id) {
+  closeModal('modal-thread');
+  modalConfirmCallback = async () => {
+    const { error } = await sb.from('reviews').delete().eq('id', id);
+    closeModal('modal-confirm');
+    if (error) return toast(error.message, 'error');
+    audit('moderate_review', { review_id: id, status: 'deleted' }); toast('Review deleted.', 'info'); loadReviews(); loadCmBadges();
+  };
+  cmById('modal-confirm-title').textContent = 'Delete review';
+  cmById('modal-confirm-body').textContent = 'Delete this review permanently? (Use Hide if you only want it off the landing page.)';
+  cmById('modal-confirm-ok').textContent = 'Yes, delete'; cmById('modal-confirm-ok').className = 'btn btn-danger';
+  cmById('modal-confirm').classList.add('open');
+}
+
+/* ───────────── ANNOUNCEMENTS ───────────── */
+async function loadAnnAdmin() {
+  const tb = cmById('ann-tbody');
+  tb.innerHTML = '<tr><td colspan="5"><div class="skeleton sk-row"></div></td></tr>';
+  const { data, error } = await sb.from('announcements').select('*').order('is_pinned', { ascending: false }).order('published_at', { ascending: false }).limit(100);
+  if (error) { tb.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="es-icon">⚠️</div><p>Could not load: ${esc(error.message)}</p></div></td></tr>`; return; }
+  cmAnns = data || [];
+  if (!cmAnns.length) { tb.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="es-icon">📣</div><p>No announcements yet. Create the first one!</p></div></td></tr>'; return; }
+  const now = Date.now();
+  tb.innerHTML = cmAnns.map(a => {
+    const live = a.is_published && new Date(a.published_at) <= now, sched = a.is_published && !live;
+    return `<tr>
+      <td><strong style="color:#fff">${esc(a.title)}</strong>${a.is_pinned ? ' 📌' : ''}<div style="font-size:12px;color:var(--slate2);max-width:420px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.content)}</div></td>
+      <td><span class="badge ${ANN_BADGE[a.category] || 'badge-slate'}">${a.category}</span></td>
+      <td><span class="badge ${live ? 'badge-green' : sched ? 'badge-blue' : 'badge-slate'}"><span class="dot"></span>${live ? 'Live' : sched ? 'Scheduled' : 'Draft'}</span></td>
+      <td>${fmtDate(a.published_at)}</td>
+      <td><div class="action-row">
+        <button class="btn btn-ghost btn-sm" onclick="openAnn(${a.id})">Edit</button>
+        <button class="btn btn-info btn-sm" onclick="toggleAnn(${a.id},${!a.is_published})">${a.is_published ? 'Unpublish' : 'Publish'}</button>
+        <button class="btn btn-danger btn-sm" onclick="confirmDeleteAnn(${a.id})">Delete</button>
+      </div></td></tr>`;
+  }).join('');
+}
+function toLocalInput(iso) { const d = new Date(iso), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; }
+function openAnn(id) {
+  annEditId = id || null;
+  const a = id ? cmAnns.find(x => x.id === id) : null;
+  cmById('ann-title-h').textContent = a ? 'Edit announcement' : 'New announcement';
+  cmById('ann-f-title').value = a ? a.title : '';
+  cmById('ann-f-content').value = a ? a.content : '';
+  cmById('ann-f-cat').value = a ? a.category : 'notice';
+  cmById('ann-f-date').value = a ? toLocalInput(a.published_at) : '';
+  cmById('ann-f-pub').checked = a ? a.is_published : true;
+  cmById('ann-f-pin').checked = a ? a.is_pinned : false;
+  cmById('modal-ann').classList.add('open');
+}
+async function saveAnn() {
+  const title = cmById('ann-f-title').value.trim(), content = cmById('ann-f-content').value.trim();
+  if (title.length < 3) return toast('Title is too short.', 'error');
+  if (content.length < 3) return toast('Write the announcement text.', 'error');
+  const dv = cmById('ann-f-date').value;
+  const row = { title, content, category: cmById('ann-f-cat').value, is_published: cmById('ann-f-pub').checked, is_pinned: cmById('ann-f-pin').checked, published_at: dv ? new Date(dv).toISOString() : (annEditId ? undefined : new Date().toISOString()) };
+  if (row.published_at === undefined) delete row.published_at;
+  const btn = cmById('ann-save-btn'); btn.disabled = true;
+  const { error } = annEditId ? await sb.from('announcements').update(row).eq('id', annEditId) : await sb.from('announcements').insert(row);
+  btn.disabled = false;
+  if (error) return toast('Could not save: ' + error.message, 'error');
+  audit('save_announcement', { title });
+  closeModal('modal-ann'); toast('Announcement saved.', 'success'); loadAnnAdmin();
+}
+async function toggleAnn(id, publish) {
+  const { error } = await sb.from('announcements').update({ is_published: publish }).eq('id', id);
+  if (error) return toast(error.message, 'error');
+  toast(publish ? 'Published.' : 'Unpublished.', 'success'); loadAnnAdmin();
+}
+function confirmDeleteAnn(id) {
+  modalConfirmCallback = async () => {
+    const { error } = await sb.from('announcements').delete().eq('id', id);
+    closeModal('modal-confirm');
+    if (error) return toast(error.message, 'error');
+    audit('delete_announcement', { id }); toast('Announcement deleted.', 'info'); loadAnnAdmin();
+  };
+  cmById('modal-confirm-title').textContent = 'Delete announcement';
+  cmById('modal-confirm-body').textContent = 'Delete this announcement permanently? (Use Unpublish to keep a draft.)';
+  cmById('modal-confirm-ok').textContent = 'Yes, delete'; cmById('modal-confirm-ok').className = 'btn btn-danger';
+  cmById('modal-confirm').classList.add('open');
 }
 
 /* close modals on overlay click */
