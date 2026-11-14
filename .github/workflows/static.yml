@@ -31,6 +31,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Build image/images.json (lists every photo in the image folder)
+        run: |
+          python3 - <<'PY'
+          import json, os
+          exts = ('.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif', '.svg')
+          files = sorted(f for f in os.listdir('image') if f.lower().endswith(exts))
+          json.dump(files, open('image/images.json', 'w'), indent=2)
+          print('images:', files)
+          PY
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
