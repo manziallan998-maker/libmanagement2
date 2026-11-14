@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BILLAN TECH HOUSETECH HOUSE· System Monitor</title>
+<title>· System Monitor</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
   :root {
@@ -454,7 +454,7 @@
     <div class="login-logo">
       <div class="orb">B</div>
       <div class="brand">
-        <span>BILLAN TECH HOUSETECH HOUSEPLATFORM</span>
+        <span>BILLAN TECH HOUSEPLATFORM</span>
         <span>System Monitor</span>
       </div>
     </div>
@@ -1758,7 +1758,7 @@ async function sendMessageReply(id) {
   await sb.from('contact_messages').update({ status: 'answered', answered_at: new Date().toISOString(), handled_by: currentUser.id }).eq('id', id);
   audit('reply_message', { message_id: id });
   const subject = 'Re: ' + (SUBJECTS[m.subject] || 'Your message to LibraryOS');
-  const text = body + '\n\n— ' + adminLabel() + '\nLibraryOS · BILLAN TECH HOUSETECH HOUSECompany';
+  const text = body + '\n\n— ' + adminLabel() + '\nLibraryOS · BILLAN TECH HOUSECompany';
   toast('Reply saved. Opening your email app…', 'success');
   window.location.href = 'mailto:' + encodeURIComponent(m.email) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(text);
   m.status = 'answered'; renderMessageThread(m); loadInbox(); loadCmBadges();
