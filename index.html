@@ -17,6 +17,61 @@ try{t=localStorage.getItem('libraryos-theme-v2');}catch(e){}
 if(ok.indexOf(t)<0){t=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'darkblue':'light';}
 document.documentElement.setAttribute('data-theme',t);})();
 </script>
+<script>
+/* ⚡ PHOTO PRE-LOADER ─ runs before the page is even drawn, so the slideshow photos start downloading
+   at the very first moment. Edit the settings here (repository, folder, files to leave out). */
+var PHOTO_SETTINGS = {
+  githubRepo:   'manziallan998-maker/libmanagement2',  // owner/repository that holds the image folder (must be public)
+  githubBranch: 'main',
+  imagesFolder: 'image/',                              // the folder with the slideshow photos
+  excludeImages: [],                                   // file names to leave out, e.g. ['billanlogo.png']
+  images: ['billanlogo.png','istockphoto-1386193712-1024x1024.jpg','jaredd-craig-HH4WBGNyltc-unsplash.jpg','mpgggggggg.png','olena-bohovyk-Ft_Wn-K5YH8-unsplash.jpg'] // last-resort list
+};
+(function(){
+  var S = PHOTO_SETTINGS, RE = /\.(jpe?g|png|webp|gif|avif|svg|bmp)$/i, KEY = 'libraryos-photos';
+  var folder = S.imagesFolder.replace(/\/?$/, '/');
+  var skip = (S.excludeImages || []).map(function(x){ return x.toLowerCase(); });
+  function clean(list){ return (list||[]).filter(function(f){ return RE.test(f.name) && skip.indexOf(f.name.toLowerCase()) < 0; }); }
+  function localUrl(n){ return /^(https?:|\/|data:)/.test(n) ? n : folder + encodeURI(n.replace(/^\.?\//, '')); }
+  var preloaded = {};
+  function preload(list){ list.slice(0, 3).forEach(function(f, i){
+    var u = localUrl(f.name); if(preloaded[u]) return; preloaded[u] = 1;
+    try{ var l = document.createElement('link'); l.rel = 'preload'; l.as = 'image'; l.href = u; if(i === 0) l.setAttribute('fetchpriority', 'high'); document.head.appendChild(l); }catch(e){}
+  }); }
+  var cached = null, cacheAge = Infinity;
+  try{ var c = JSON.parse(localStorage.getItem(KEY) || 'null'); if(c && c.list && c.list.length){ cached = clean(c.list); cacheAge = Date.now() - c.t; } }catch(e){}
+  if(cached && cached.length) preload(cached);
+  function save(list){ try{ localStorage.setItem(KEY, JSON.stringify({ t: Date.now(), list: list })); }catch(e){} return list; }
+  function github(){
+    var u = 'https://api.github.com/repos/' + S.githubRepo + '/contents/' + folder.replace(/\/$/, '') + '?ref=' + S.githubBranch;
+    return fetch(u, { headers: { Accept: 'application/vnd.github+json' } })
+      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .then(function(a){ return clean(a.filter(function(f){ return f.type === 'file'; }).map(function(f){ return { name: f.name, url: f.download_url }; })); });
+  }
+  function json(){
+    return fetch(folder + 'images.json', { cache: 'no-store' })
+      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .then(function(j){ return clean((Array.isArray(j) ? j : (j.images || [])).filter(function(x){ return typeof x === 'string'; }).map(function(n){ return { name: n, url: null }; })); });
+  }
+  /* GitHub and images.json are asked at the same time; the first one that answers wins */
+  function race(a, b){
+    return new Promise(function(resolve){
+      var left = 2;
+      function ok(l){ if(l && l.length) resolve(l); else if(--left === 0) resolve([]); }
+      function bad(){ if(--left === 0) resolve([]); }
+      a.then(ok, bad); b.then(ok, bad);
+    });
+  }
+  var fresh = (cached && cacheAge < 120000) ? Promise.resolve(cached)
+            : race(github(), json()).then(function(l){ if(l.length){ preload(l); save(l); } return l; });
+  window.__photos = {
+    cached: cached,                 // list from the last visit → slideshow can start instantly
+    fresh: fresh,                   // the up-to-date list (promise)
+    refresh: function(){ return github().then(save).catch(function(){ return null; }); },
+    settings: S
+  };
+})();
+</script>
 <noscript><style>.wtxt{clip-path:none!important}.reveal{opacity:1!important;transform:none!important}#splash{display:none!important}</style></noscript>
 <style>
 /* ═════════════ DESIGN TOKENS ═════════════ */
@@ -199,6 +254,9 @@ header.nav.scrolled{box-shadow:0 10px 30px -18px rgba(0,0,0,.45)}
 .slide[data-pos="0"]{cursor:zoom-in}
 .slide .zoom{position:absolute;z-index:2;top:.7rem;right:.7rem;background:rgba(11,27,58,.75);color:#fff;font-size:.7rem;font-weight:700;padding:.25rem .6rem;border-radius:99px;opacity:0;transition:opacity .3s;backdrop-filter:blur(6px)}
 .slide[data-pos="0"]:hover .zoom{opacity:1}
+.stage-skel{position:absolute;top:2%;bottom:2%;left:20%;width:60%;border-radius:32px;background:linear-gradient(110deg,var(--bg-3) 30%,var(--card) 50%,var(--bg-3) 70%);background-size:200% 100%;animation:sk 1.2s linear infinite;border:3px solid var(--line)}
+.stage-skel[hidden]{display:none}
+.dot-b.wide,.dot-b.wide.active{width:min(260px,70vw)}
 #lightbox{position:fixed;inset:0;z-index:350;background:rgba(0,0,0,.88);display:grid;place-items:center;padding:3.5rem 1rem 3rem;backdrop-filter:blur(6px);animation:fade .25s}
 #lightbox[hidden]{display:none}
 @keyframes fade{from{opacity:0}}
@@ -577,8 +635,8 @@ footer{background:var(--footer);color:#cfd6e6;padding:2rem 0 calc(2rem + env(saf
         <div class="dots" id="dots" role="tablist"></div>
       </div>
       <div class="folios reveal">
-        <a class="folio" id="folioA" href="https://manzi-allan.netlify.app" data-pf="0" target="_blank" rel="noopener"><span class="av">N</span><span><small>Developer portfolio</small><b>Nkurunziza Manzi Allan</b><span class="url" data-pf-url="0">manzi-allan.netlify.app</span></span></a>
-        <a class="folio" id="folioB" href="https://billy.netlify.app" data-pf="1" target="_blank" rel="noopener"><span class="av">M</span><span><small>Developer portfolio</small><b>Mugisha Billy Chris</b><span class="url" data-pf-url="1">billy.netlify.app</span></span></a>
+        <a class="folio" id="folioA" href="https://manzi-allan.netlify.app" data-pf="0" target="_blank" rel="noopener"><span class="av">M</span><span><small>Developer portfolio</small><b>Manzi Allan</b><span class="url" data-pf-url="0">manzi-allan.netlify.app</span></span></a>
+        <a class="folio" id="folioB" href="https://billy.netlify.app" data-pf="1" target="_blank" rel="noopener"><span class="av">B</span><span><small>Developer portfolio</small><b>Mugisha Billy Chris</b><span class="url" data-pf-url="1">billy.netlify.app</span></span></a>
       </div>
     </div>
   </div>
@@ -597,7 +655,7 @@ footer{background:var(--footer);color:#cfd6e6;padding:2rem 0 calc(2rem + env(saf
           <li>Works on smartphones, tablets and laptops</li>
           <li>Light and dark mode for comfortable reading, day or night</li>
           <li>Separate, secure space for every registered organisation</li>
-          <li>Powered by BILLAN TECH HOUSE Company made to grow with you</li>
+          <li>Powered by Billan Company — made to grow with you</li>
         </ul>
       </div>
       <div class="about-visual reveal" style="--d:.15s">
@@ -707,7 +765,7 @@ footer{background:var(--footer);color:#cfd6e6;padding:2rem 0 calc(2rem + env(saf
       <div class="contact-info reveal">
         <a class="info" href="https://manzi-allan.netlify.app" data-pf="0" target="_blank" rel="noopener"><span class="ci">🌐</span><span><small>Developer</small><b>Manzi Allan — manzi-allan.netlify.app</b></span></a>
         <a class="info" href="https://billy.netlify.app" data-pf="1" target="_blank" rel="noopener"><span class="ci">💼</span><span><small>Developer</small><b>Mugisha Billy Chris — billy.netlify.app</b></span></a>
-        <div class="info"><span class="ci">🏢</span><span><small>Powered by</small><b>BILLAN TECH HOUSECompany</b></span></div>
+        <div class="info"><span class="ci">🏢</span><span><small>Powered by</small><b>Billan Company</b></span></div>
       </div>
       <form class="cf reveal" id="contactForm" style="--d:.1s" novalidate>
         <div id="cfBody" style="display:grid;gap:1rem">
@@ -724,7 +782,7 @@ footer{background:var(--footer);color:#cfd6e6;padding:2rem 0 calc(2rem + env(saf
         <div class="field"><label for="cm">Message</label><textarea id="cm" name="message" maxlength="3000" required placeholder="Tell us about your library…"></textarea></div>
         <input class="hp" id="cweb" tabindex="-1" autocomplete="off" aria-hidden="true">
         <button class="btn btn-primary" type="submit" id="cfBtn">Send message <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
-        <p class="contact-note">Your message goes straight to the LibraryOS team at BILLAN TECH HOUSE Company.</p>
+        <p class="contact-note">Your message goes straight to the LibraryOS team at Billan Company.</p>
         </div>
         <div class="form-ok" id="cfOk"><span class="big">✅</span><b>Message sent!</b><p>Thank you for reaching out. We will answer you by email as soon as we can.</p><button class="btn btn-ghost" type="button" id="cfAgain" style="margin-top:1rem">Send another message</button></div>
       </form>
@@ -749,7 +807,7 @@ footer{background:var(--footer);color:#cfd6e6;padding:2rem 0 calc(2rem + env(saf
 
 <footer>
   <div class="wrap foot">
-    <div><b>Powered by <span>BILLAN TECH HOUSE</span> COMPANY</b><div style="font-size:.82rem;opacity:.7;margin-top:.2rem">© <span id="yr"></span> LibraryOS · Knowledge for a smarter future</div></div>
+    <div><b>Powered by <span>Billan</span> Company</b><div style="font-size:.82rem;opacity:.7;margin-top:.2rem">© <span id="yr"></span> LibraryOS · Knowledge for a smarter future</div></div>
     <div class="foot-links"><a href="#home">Home</a><a href="#about">About</a><a href="#services">Services</a><a href="#reviews">Reviews</a><a href="#contact">Contact</a><a href="https://manzi-allan.netlify.app" data-pf="0" target="_blank" rel="noopener">Manzi Allan</a><a href="https://billy.netlify.app" data-pf="1" target="_blank" rel="noopener">Billy</a></div>
   </div>
 </footer>
@@ -775,15 +833,9 @@ const CONFIG = {
     { name:'Manzi Allan',         url:'https://manzi-allan.netlify.app' },
     { name:'Mugisha Billy Chris', url:'https://billy.netlify.app' }
   ],
-  imagesFolder:'image/',       // folder with the slideshow photos
   slideSeconds: 4,             // seconds each photo stays
-  // Slideshow photos: the page asks GitHub which files are in the image folder, so every photo you
-  // upload there appears automatically (no list to edit, no rebuild).
-  githubRepo:   'manziallan998-maker/libmanagement2',   // owner/repository that holds the image folder (must be public)
-  githubBranch: 'main',
-  excludeImages: [],           // file names to leave out of the slideshow, e.g. ['billanlogo.png']
-  // Last-resort list, used only if GitHub and the folder cannot be read:
-  images: ['billanlogo.png','istockphoto-1386193712-1024x1024.jpg','jaredd-craig-HH4WBGNyltc-unsplash.jpg','mpgggggggg.png','olena-bohovyk-Ft_Wn-K5YH8-unsplash.jpg'],
+  // Slideshow photo settings (repository, folder, files to leave out) are in the "PHOTO PRE-LOADER"
+  // block at the very top of this file, so photos can start downloading before the page is drawn.
   // The counting boxes: numbers come LIVE from the database (function public_stats()).
   // "fallback" is shown only if the database cannot be reached.
   stats: [
@@ -942,7 +994,7 @@ else {
   // show the intro once per browser tab session so returning visitors are not slowed down
   let seen=false; try{ seen = sessionStorage.getItem('libraryos-intro')==='1'; }catch(e){}
   if (seen){ $('#splash').remove(); splashDone=true; startWriting(); }
-  else { try{ sessionStorage.setItem('libraryos-intro','1'); }catch(e){} setTimeout(endSplash, 3000); }
+  else { try{ sessionStorage.setItem('libraryos-intro','1'); }catch(e){} setTimeout(endSplash, 2200); }
 }
 
 /* ═══════════════ THEME ═══════════════ */
@@ -1163,115 +1215,211 @@ $('#contactForm').addEventListener('submit', async e=>{
 $('#cfAgain').addEventListener('click',()=>{ $('#cfOk').classList.remove('show'); $('#cfBody').style.display='grid'; });
 
 /* keep announcements & reviews fresh while the page is open */
-setInterval(()=>{ if(!document.hidden){ loadAnnouncements(false); loadReviews(true); } }, CONFIG.refreshSeconds*1000);
+setInterval(()=>{ if(!document.hidden){ loadAnnouncements(false); loadReviews(true); if(window.__refreshPhotos) window.__refreshPhotos(); } }, CONFIG.refreshSeconds*1000);
 
-/* ═══════════════ PHOTO CAROUSEL ═══════════════ */
-const IMG_RE = /\.(jpe?g|png|webp|gif|avif|svg|bmp)$/i;
-const folder = CONFIG.imagesFolder.replace(/\/?$/,'/');
-const norm = name => /^(https?:|\/|data:)/.test(name) || name.startsWith(folder) ? name : folder + encodeURI(name.replace(/^\.?\//,''));
+/* ═══════════════ PHOTO SLIDESHOW ═══════════════
+   • photos start loading in <head> (see PHOTO PRE-LOADER) and the first slide shows the moment it is ready
+   • the other photos join the slideshow one by one as they finish loading – nothing waits for them
+   • the list from the last visit is remembered, so on a return visit sliding starts instantly
+   • timing: every slide gets exactly slideSeconds; hovering / touching / tab hidden / scrolled away pauses
+     and later CONTINUES with the remaining time (it never restarts a half-shown slide)
+   • any number of photos: new files in the image folder appear by themselves, deleted ones disappear */
+(function(){
+  const S = window.PHOTO_SETTINGS, P = window.__photos;
+  const IMG_RE = /\.(jpe?g|png|webp|gif|avif|svg|bmp)$/i;
+  const folder = S.imagesFolder.replace(/\/?$/,'/');
+  const skipSet = (S.excludeImages||[]).map(x=>x.toLowerCase());
+  const local = n => /^(https?:|\/|data:)/.test(n) ? n : folder + encodeURI(n.replace(/^\.?\//,''));
+  const pad = n => String(n).padStart(2,'0');
 
-async function discoverImages(){
-  let names = [], remote = {};
-  /* 1. ask GitHub what is REALLY inside the image folder (works on Vercel, Netlify, GitHub Pages …) */
-  if(CONFIG.githubRepo){
-    try{
-      let list = null;
-      try{ const c = JSON.parse(sessionStorage.getItem('libraryos-gh-img')||'null'); if(c && Date.now()-c.t < 300000) list = c.list; }catch(e){}
-      if(!list){
-        const r = await fetch(`https://api.github.com/repos/${CONFIG.githubRepo}/contents/${CONFIG.imagesFolder.replace(/\/$/,'')}?ref=${CONFIG.githubBranch}`,{headers:{Accept:'application/vnd.github+json'}});
-        if(r.ok){ list = (await r.json()).filter(f=>f.type==='file' && IMG_RE.test(f.name)).map(f=>({name:f.name,url:f.download_url}));
-                  try{ sessionStorage.setItem('libraryos-gh-img', JSON.stringify({t:Date.now(),list})); }catch(e){} }
-      }
-      if(list && list.length){ names = list.map(f=>f.name); list.forEach(f=>remote[f.name]=f.url); }
-    }catch(e){}
+  const stage = $('#stage'), dotsBox = $('#dots'), box = $('#showcase'), prevB = $('#prev'), nextB = $('#next');
+  const DUR = CONFIG.slideSeconds * 1000;
+  box.style.setProperty('--dur', CONFIG.slideSeconds+'s');
+
+  const counter = document.createElement('div'); counter.className='counter'; stage.appendChild(counter);
+  const skel = document.createElement('div'); skel.className='stage-skel'; stage.insertBefore(skel, counter);
+
+  let items = [];                 // { name, order, src, el, ph }
+  let cur = 0, timer = null, remaining = DUR, startedAt = 0, usingPlaceholders = false;
+  const pausers = new Set(), pending = new Set();
+
+  /* ───── layout: who is centre / left / right ───── */
+  function layout(restartBar){
+    const n = items.length;
+    items.forEach((it,i)=>{
+      let d = ((i-cur)%n+n)%n; if(d>n/2) d-=n;
+      it.el.dataset.pos = d===0 ? '0' : (Math.abs(d)===1 && n>1) ? String(d) : 'h';
+      it.el.setAttribute('aria-hidden', d===0 ? 'false':'true');
+    });
+    counter.textContent = n ? pad(cur+1)+' / '+pad(n) : '';
+    counter.style.display = n ? '' : 'none';
+    const bars = $$('.dot-b', dotsBox);
+    bars.forEach((b,i)=>{
+      const on = bars.length===1 || i===cur;
+      const was = b.classList.contains('active');
+      if(on && (restartBar || !was)){ b.classList.remove('active'); void b.offsetWidth; b.classList.add('active'); }
+      else if(!on) b.classList.remove('active');
+    });
   }
-  /* 2. image/images.json (optional list you can keep by hand) */
-  if(!names.length){
-    try { const r = await fetch(folder+'images.json',{cache:'no-store'}); if(r.ok){ const j=await r.json(); names = (Array.isArray(j)?j:j.images||[]).filter(x=>typeof x==='string'); } } catch(e){}
+  function renderDots(){
+    const n = items.length;
+    dotsBox.innerHTML = '';
+    const showNav = n > 1;
+    prevB.style.display = nextB.style.display = dotsBox.style.display = showNav ? '' : 'none';
+    if(!showNav) return;
+    if(n > 10){                                     // many photos: one progress bar instead of dots
+      const b = document.createElement('div'); b.className='dot-b wide'; dotsBox.appendChild(b); return;
+    }
+    items.forEach((_,i)=>{ const b=document.createElement('button'); b.className='dot-b'; b.type='button'; b.setAttribute('aria-label','Go to photo '+(i+1)); b.addEventListener('click',()=>goTo(i)); dotsBox.appendChild(b); });
   }
-  /* 3. servers that show a folder listing (Live Server, Apache, python http.server …) */
-  if(!names.length){
-    try {
+
+  /* ───── timer with pause / resume that keeps the remaining time ───── */
+  function stopTimer(){ clearTimeout(timer); timer = null; }
+  function runTimer(){
+    stopTimer();
+    if(items.length < 2 || pausers.size) return;
+    startedAt = performance.now();
+    timer = setTimeout(()=>{ timer = null; goTo(cur+1); }, remaining);
+  }
+  function pause(reason){
+    if(!pausers.size && timer){ remaining = Math.max(400, remaining - (performance.now()-startedAt)); stopTimer(); }
+    pausers.add(reason); box.classList.add('paused');
+  }
+  function resume(reason){
+    if(!pausers.delete(reason)) return;
+    if(!pausers.size){ box.classList.remove('paused'); runTimer(); }
+  }
+  function goTo(i){
+    const n = items.length; if(!n) return;
+    cur = ((i%n)+n)%n; remaining = DUR; layout(true); runTimer();
+  }
+
+  /* ───── adding / removing slides while the show is running ───── */
+  function buildSlide(it){
+    const d = document.createElement('div'); d.className = 'slide' + (it.ph ? ' ph' : ''); d.dataset.pos = 'h'; d.setAttribute('role','group');
+    if(it.ph){ d.style.background = it.g; d.innerHTML = `<div><span class="big">${it.e}</span><b>${it.t}</b><small>${it.s}</small></div>`; }
+    else {
+      const bg = document.createElement('div'); bg.className='bgblur'; bg.style.backgroundImage = 'url("'+it.src+'")'; d.appendChild(bg);
+      const im = document.createElement('img'); im.src = it.src; im.alt = 'LibraryOS photo'; im.decoding = 'async'; d.appendChild(im);
+      const z = document.createElement('span'); z.className='zoom'; z.textContent='🔍 Click to enlarge'; d.appendChild(z);
+      d.dataset.src = it.src;
+    }
+    it.el = d; return d;
+  }
+  function insert(it){
+    const curEl = items[cur] && items[cur].el;
+    stage.insertBefore(buildSlide(it), counter);
+    items.push(it); items.sort((a,b)=>a.order-b.order);
+    cur = curEl ? items.findIndex(x=>x.el===curEl) : 0;
+    skel.hidden = true;
+    items.forEach((x,i)=>x.el.setAttribute('aria-label','Photo '+(i+1)+' of '+items.length));
+    renderDots(); layout(true);
+    if(!timer) runTimer();
+  }
+  function remove(it){
+    const curEl = items[cur] && items[cur].el, idx = items.indexOf(it);
+    it.el.remove(); items.splice(idx,1);
+    if(!items.length){ cur = 0; stopTimer(); renderDots(); layout(true); return; }
+    cur = it.el===curEl ? Math.min(idx, items.length-1) : items.findIndex(x=>x.el===curEl);
+    renderDots(); layout(true); remaining = DUR; runTimer();
+  }
+
+  /* ───── loading one photo: this site's copy first, GitHub's copy as backup ───── */
+  const tryLoad = src => new Promise(res => {
+    const im = new Image(); im.decoding = 'async';
+    im.onload = () => { (im.decode ? im.decode() : Promise.resolve()).catch(()=>{}).then(()=>res(src)); };
+    im.onerror = () => res(null); im.src = src;
+  });
+  const loadPhoto = async f => (await tryLoad(local(f.name))) || (f.url ? await tryLoad(f.url) : null);
+
+  function removePlaceholders(){ items.filter(i=>i.ph).forEach(remove); usingPlaceholders = false; }
+  async function sync(list){
+    list = list.filter(f => IMG_RE.test(f.name) && !skipSet.includes(f.name.toLowerCase()));
+    if(!list.length) return;
+    const want = new Map(list.map((f,i)=>[f.name, i]));
+    items.filter(it=>!it.ph && !want.has(it.name)).forEach(remove);          // photos deleted from the folder
+    const curEl = items[cur] && items[cur].el;
+    items.forEach(it=>{ if(want.has(it.name)) it.order = want.get(it.name); });
+    items.sort((a,b)=>a.order-b.order); cur = curEl ? Math.max(0, items.findIndex(x=>x.el===curEl)) : 0;
+    const have = new Set(items.map(i=>i.name));
+    await Promise.all(list.filter(f=>!have.has(f.name) && !pending.has(f.name)).map(async f=>{
+      pending.add(f.name);
+      const src = await loadPhoto(f);                                        // each photo joins as soon as it is ready
+      pending.delete(f.name);
+      if(src && !items.some(i=>i.name===f.name)){ if(usingPlaceholders) removePlaceholders(); insert({ name:f.name, order:want.get(f.name), src }); }
+    }));
+  }
+
+  const PLACEHOLDERS = [
+    { e:'📚', t:'Thousands of books', s:'Catalogued and searchable', g:'linear-gradient(135deg,#F97316,#FBBF24)' },
+    { e:'🎓', t:'Every student, one register', s:'Members & borrowing history', g:'linear-gradient(135deg,#0B1B3A,#2B4C9B)' },
+    { e:'🔄', t:'Issue & return in seconds', s:'Due dates tracked for you', g:'linear-gradient(135deg,#EA580C,#F43F5E)' },
+    { e:'📊', t:'Live reports', s:'See your library at a glance', g:'linear-gradient(135deg,#0F766E,#14B8A6)' }
+  ];
+  function showPlaceholders(){ usingPlaceholders = true; PLACEHOLDERS.forEach((p,i)=>insert({ ...p, name:'ph'+i, order:i, ph:true })); }
+
+  async function fallbackNames(){
+    try{                                           // servers that show a folder listing
       const r = await fetch(folder,{cache:'no-store'});
       if(r.ok && (r.headers.get('content-type')||'').includes('text/html')){
         const html = await r.text();
-        names = [...new Set([...html.matchAll(/href=["']([^"'?#]+)["']/gi)].map(m=>decodeURIComponent(m[1])).filter(h=>IMG_RE.test(h)).map(h=>h.split('/').pop()))];
+        const names = [...new Set([...html.matchAll(/href=["']([^"'?#]+)["']/gi)].map(m=>decodeURIComponent(m[1])).filter(h=>IMG_RE.test(h)).map(h=>h.split('/').pop()))];
+        if(names.length) return names;
       }
-    } catch(e){}
+    }catch(e){}
+    return S.images.slice();
   }
-  /* 4. the list typed in CONFIG.images */
-  if(!names.length) names = CONFIG.images.slice();
-  const skip = (CONFIG.excludeImages||[]).map(x=>x.toLowerCase());
-  names = names.filter(x => IMG_RE.test(x) && !skip.includes(x.split('/').pop().toLowerCase()));
-  /* keep only photos that really load: the site's own copy first, GitHub's copy as a backup */
-  const tryLoad = src => new Promise(res => { const im=new Image(); im.onload=()=>res(src); im.onerror=()=>res(null); im.src=src; });
-  const ok = await Promise.all(names.map(async n => (await tryLoad(norm(n))) || (remote[n] ? await tryLoad(remote[n]) : null)));
-  return ok.filter(Boolean);
-}
 
-const PLACEHOLDERS = [
-  { e:'📚', t:'Thousands of books', s:'Catalogued and searchable', g:'linear-gradient(135deg,#F97316,#FBBF24)' },
-  { e:'🎓', t:'Every student, one register', s:'Members & borrowing history', g:'linear-gradient(135deg,#0B1B3A,#2B4C9B)' },
-  { e:'🔄', t:'Issue & return in seconds', s:'Due dates tracked for you', g:'linear-gradient(135deg,#EA580C,#F43F5E)' },
-  { e:'📊', t:'Live reports', s:'See your library at a glance', g:'linear-gradient(135deg,#0F766E,#14B8A6)' }
-];
+  /* ───── start: instantly from the remembered list, then confirm with the fresh one ───── */
+  (async function start(){
+    let shownFromCache = false;
+    if(P && P.cached && P.cached.length){ shownFromCache = true; sync(P.cached); }
+    const fresh = P ? await P.fresh : [];
+    if(fresh && fresh.length) await sync(fresh);
+    else if(!shownFromCache) await sync((await fallbackNames()).map(n=>({name:n,url:null})));
+    if(!items.length) setTimeout(()=>{ if(!items.length) { skel.hidden = true; showPlaceholders(); } }, shownFromCache ? 2500 : 0);
+  })();
+  window.__refreshPhotos = async () => { if(!P) return; const l = await P.refresh(); if(l && l.length) sync(l); };
 
-(async function initCarousel(){
-  const stage = $('#stage'), dots = $('#dots'), box = $('#showcase');
-  const dur = CONFIG.slideSeconds;
-  box.style.setProperty('--dur', dur+'s');
-  const imgs = await discoverImages();
-  let items;
-  if (imgs.length){
-    items = imgs.map((src,i)=>{ const d=document.createElement('div'); d.className='slide'; d.setAttribute('role','group'); d.setAttribute('aria-label',`Photo ${i+1} of ${imgs.length}`);
-      const bg=document.createElement('div'); bg.className='bgblur'; bg.style.backgroundImage='url("'+src+'")'; d.appendChild(bg);
-      const im=document.createElement('img'); im.src=src; im.alt='LibraryOS photo '+(i+1); im.decoding='async'; if(i>2) im.loading='lazy'; d.appendChild(im);
-      const z=document.createElement('span'); z.className='zoom'; z.textContent='🔍 Click to enlarge'; d.appendChild(z); d.dataset.src=src; return d; });
-  } else {
-    items = PLACEHOLDERS.map(p=>{ const d=document.createElement('div'); d.className='slide ph'; d.style.background=p.g; d.innerHTML=`<div><span class="big">${p.e}</span><b>${p.t}</b><small>${p.s}</small></div>`; return d; });
-  }
-  items.forEach(d=>stage.appendChild(d));
-  const n = items.length, counter = document.createElement('div'); counter.className='counter'; stage.appendChild(counter);
-  items.forEach((_,i)=>{ const b=document.createElement('button'); b.className='dot-b'; b.type='button'; b.setAttribute('aria-label','Go to photo '+(i+1)); b.addEventListener('click',()=>{go(i);}); dots.appendChild(b); });
-  const dotEls = $$('.dot-b', dots);
-  let cur = 0, timer = null;
+  /* ───── controls ───── */
+  nextB.addEventListener('click',()=>goTo(cur+1));
+  prevB.addEventListener('click',()=>goTo(cur-1));
+  stage.addEventListener('keydown',e=>{ if(e.key==='ArrowRight') goTo(cur+1); if(e.key==='ArrowLeft') goTo(cur-1); });
 
-  function layout(){
-    items.forEach((el,i)=>{
-      let d = ((i-cur)%n+n)%n; if(d>n/2) d-=n;
-      el.dataset.pos = d===0 ? '0' : (Math.abs(d)===1 && n>1) ? String(d) : 'h';
-      el.setAttribute('aria-hidden', d===0 ? 'false':'true');
-    });
-    dotEls.forEach((b,i)=>{ b.classList.remove('active'); void b.offsetWidth; if(i===cur) b.classList.add('active'); });
-    counter.textContent = String(cur+1).padStart(2,'0')+' / '+String(n).padStart(2,'0');
-  }
-  function schedule(){ clearTimeout(timer); if(n>1 && !box.classList.contains('paused')) timer = setTimeout(()=>go(cur+1), dur*1000); }
-  function go(i){ cur = ((i%n)+n)%n; layout(); schedule(); }
-  $('#next').addEventListener('click',()=>go(cur+1));
-  $('#prev').addEventListener('click',()=>go(cur-1));
-  stage.addEventListener('keydown',e=>{ if(e.key==='ArrowRight') go(cur+1); if(e.key==='ArrowLeft') go(cur-1); });
-  /* pause while the visitor looks closely (mouse) — never on touch screens */
-  box.addEventListener('mouseenter',()=>{ box.classList.add('paused'); clearTimeout(timer); });
-  box.addEventListener('mouseleave',()=>{ box.classList.remove('paused'); go(cur); });
-  document.addEventListener('visibilitychange',()=>{ if(document.hidden) clearTimeout(timer); else go(cur); });
+  /* pausing: mouse over · finger down · keyboard focus · tab hidden · scrolled out of view */
+  box.addEventListener('mouseenter',()=>pause('hover'));
+  box.addEventListener('mouseleave',()=>resume('hover'));
+  let touchT = null;
+  stage.addEventListener('pointerdown',e=>{ if(e.pointerType!=='mouse'){ clearTimeout(touchT); pause('touch'); } });
+  const endTouch = e => { if(e.pointerType!=='mouse'){ clearTimeout(touchT); touchT = setTimeout(()=>resume('touch'), 1500); } };
+  stage.addEventListener('pointerup',endTouch); stage.addEventListener('pointercancel',endTouch);
+  box.addEventListener('focusin',e=>{ if(e.target.matches(':focus-visible')) pause('focus'); });
+  box.addEventListener('focusout',()=>resume('focus'));
+  document.addEventListener('visibilitychange',()=>{ document.hidden ? pause('hidden') : resume('hidden'); });
+  new IntersectionObserver(es=>es.forEach(en=>{ en.isIntersecting ? resume('offscreen') : pause('offscreen'); }),{threshold:.2}).observe(box);
+
   /* swipe */
-  let sx=null, lastDx=0;
-  stage.addEventListener('pointerdown',e=>{ sx=e.clientX; lastDx=0; });
-  stage.addEventListener('pointerup',e=>{ if(sx===null) return; const dx=e.clientX-sx; lastDx=dx; sx=null; if(Math.abs(dx)>40) go(cur+(dx<0?1:-1)); });
-  /* click: side photo → bring forward, centre photo → open the big viewer */
-  const lb=$('#lightbox'), lbImg=$('#lbImg'); let lbIdx=0, lbOpen=false;
-  function lbShow(i){ lbIdx=((i%n)+n)%n; const src=items[lbIdx].dataset.src; lbImg.src=src; lbImg.alt='LibraryOS photo '+(lbIdx+1); $('#lbCap').textContent=String(lbIdx+1).padStart(2,'0')+' / '+String(n).padStart(2,'0'); }
-  function lbClose(){ lb.hidden=true; lbOpen=false; document.body.style.overflow=''; box.classList.remove('paused'); go(cur); }
-  function lbOpenAt(i){ lbShow(i); lb.hidden=false; lbOpen=true; document.body.style.overflow='hidden'; box.classList.add('paused'); clearTimeout(timer); $('#lbClose').focus(); }
-  stage.addEventListener('click',e=>{ const sl=e.target.closest('.slide'); if(!sl||Math.abs(lastDx)>8||!sl.dataset.src) return; const i=items.indexOf(sl); if(sl.dataset.pos==='0') lbOpenAt(i); else if(sl.dataset.pos!=='h') go(i); });
+  let sx = null, lastDx = 0;
+  stage.addEventListener('pointerdown',e=>{ sx = e.clientX; lastDx = 0; });
+  stage.addEventListener('pointerup',e=>{ if(sx===null) return; lastDx = e.clientX - sx; sx = null; if(Math.abs(lastDx)>40) goTo(cur+(lastDx<0?1:-1)); });
+  stage.addEventListener('pointercancel',()=>{ sx = null; });
+
+  /* click: side photo → bring forward · centre photo → big viewer */
+  const lb = $('#lightbox'), lbImg = $('#lbImg'); let lbIdx = 0, lbOpen = false;
+  const real = () => items.filter(i=>!i.ph);
+  function lbShow(i){ const r = real(); if(!r.length) return; lbIdx = ((i%r.length)+r.length)%r.length; lbImg.src = r[lbIdx].src; lbImg.alt = 'LibraryOS photo '+(lbIdx+1); $('#lbCap').textContent = pad(lbIdx+1)+' / '+pad(r.length); }
+  function lbClose(){ lb.hidden = true; lbOpen = false; document.body.style.overflow = ''; resume('lightbox'); }
+  function lbOpenAt(it){ lbShow(real().indexOf(it)); lb.hidden = false; lbOpen = true; document.body.style.overflow = 'hidden'; pause('lightbox'); $('#lbClose').focus(); }
+  stage.addEventListener('click',e=>{
+    const sl = e.target.closest('.slide'); if(!sl || Math.abs(lastDx)>8) return;
+    const it = items.find(x=>x.el===sl); if(!it) return;
+    if(sl.dataset.pos==='0'){ if(!it.ph) lbOpenAt(it); } else if(sl.dataset.pos!=='h') goTo(items.indexOf(it));
+  });
   $('#lbClose').addEventListener('click',lbClose);
   $('#lbPrev').addEventListener('click',()=>lbShow(lbIdx-1));
   $('#lbNext').addEventListener('click',()=>lbShow(lbIdx+1));
   lb.addEventListener('click',e=>{ if(e.target===lb) lbClose(); });
   document.addEventListener('keydown',e=>{ if(!lbOpen) return; if(e.key==='Escape') lbClose(); if(e.key==='ArrowLeft') lbShow(lbIdx-1); if(e.key==='ArrowRight') lbShow(lbIdx+1); });
-  stage.addEventListener('pointercancel',()=>{ sx=null; });
-  if(n<2){ $('#prev').style.display=$('#next').style.display='none'; dots.style.display='none'; }
-  layout();
 })();
 </script>
 </body>
