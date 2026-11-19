@@ -25,7 +25,7 @@ var PHOTO_SETTINGS = {
   githubBranch: 'main',
   imagesFolder: 'image/',                              // the folder with the slideshow photos
   excludeImages: [],                                   // file names to leave out, e.g. ['billanlogo.png']
-  images: ['billanlogo.png','istockphoto-1386193712-1024x1024.jpg','jaredd-craig-HH4WBGNyltc-unsplash.jpg','mpgggggggg.png','olena-bohovyk-Ft_Wn-K5YH8-unsplash.jpg'] // last-resort list
+  images: ['billanlogo.png','istockphoto-1386193712-1024x1024.jpg','jaredd-craig-HH4WBGNyltc-unsplash.jpg','mpgggggggg.png','olena-bohovyk-Ft_Wn-K5YH8-unsplash.jpg'] // the photos shown first, instantly, while GitHub is still answering
 };
 (function(){
   var S = PHOTO_SETTINGS, RE = /\.(jpe?g|png|webp|gif|avif|svg|bmp)$/i, KEY = 'libraryos-photos';
@@ -33,14 +33,18 @@ var PHOTO_SETTINGS = {
   var skip = (S.excludeImages || []).map(function(x){ return x.toLowerCase(); });
   function clean(list){ return (list||[]).filter(function(f){ return RE.test(f.name) && skip.indexOf(f.name.toLowerCase()) < 0; }); }
   function localUrl(n){ return /^(https?:|\/|data:)/.test(n) ? n : folder + encodeURI(n.replace(/^\.?\//, '')); }
-  var preloaded = {};
-  function preload(list){ list.slice(0, 3).forEach(function(f, i){
+  var preloaded = {}, warm = [];
+  /* the first 3 photos get a high-priority <link preload>; all the others are fetched right behind them */
+  function preload(list){ list.forEach(function(f, i){
     var u = localUrl(f.name); if(preloaded[u]) return; preloaded[u] = 1;
-    try{ var l = document.createElement('link'); l.rel = 'preload'; l.as = 'image'; l.href = u; if(i === 0) l.setAttribute('fetchpriority', 'high'); document.head.appendChild(l); }catch(e){}
+    if(i < 3){
+      try{ var l = document.createElement('link'); l.rel = 'preload'; l.as = 'image'; l.href = u; if(i === 0) l.setAttribute('fetchpriority', 'high'); document.head.appendChild(l); }catch(e){}
+    } else { var im = new Image(); im.decoding = 'async'; im.src = u; warm.push(im); }
   }); }
   var cached = null, cacheAge = Infinity;
   try{ var c = JSON.parse(localStorage.getItem(KEY) || 'null'); if(c && c.list && c.list.length){ cached = clean(c.list); cacheAge = Date.now() - c.t; } }catch(e){}
-  if(cached && cached.length) preload(cached);
+  /* start downloading at once: the remembered list, or (first visit) the known file names while GitHub is still answering */
+  preload(cached && cached.length ? cached : (S.images || []).map(function(n){ return { name: n, url: null }; }));
   function save(list){ try{ localStorage.setItem(KEY, JSON.stringify({ t: Date.now(), list: list })); }catch(e){} return list; }
   function github(){
     var u = 'https://api.github.com/repos/' + S.githubRepo + '/contents/' + folder.replace(/\/$/, '') + '?ref=' + S.githubBranch;
@@ -48,22 +52,9 @@ var PHOTO_SETTINGS = {
       .then(function(r){ if(!r.ok) throw 0; return r.json(); })
       .then(function(a){ return clean(a.filter(function(f){ return f.type === 'file'; }).map(function(f){ return { name: f.name, url: f.download_url }; })); });
   }
-  function json(){
-    return fetch(folder + 'images.json', { cache: 'no-store' })
-      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
-      .then(function(j){ return clean((Array.isArray(j) ? j : (j.images || [])).filter(function(x){ return typeof x === 'string'; }).map(function(n){ return { name: n, url: null }; })); });
-  }
-  /* GitHub and images.json are asked at the same time; the first one that answers wins */
-  function race(a, b){
-    return new Promise(function(resolve){
-      var left = 2;
-      function ok(l){ if(l && l.length) resolve(l); else if(--left === 0) resolve([]); }
-      function bad(){ if(--left === 0) resolve([]); }
-      a.then(ok, bad); b.then(ok, bad);
-    });
-  }
   var fresh = (cached && cacheAge < 120000) ? Promise.resolve(cached)
-            : race(github(), json()).then(function(l){ if(l.length){ preload(l); save(l); } return l; });
+            : github().then(function(l){ if(l.length){ preload(l); save(l); return l; } return cached || []; },
+                            function(){ return cached || []; });
   window.__photos = {
     cached: cached,                 // list from the last visit → slideshow can start instantly
     fresh: fresh,                   // the up-to-date list (promise)
@@ -256,7 +247,6 @@ header.nav.scrolled{box-shadow:0 10px 30px -18px rgba(0,0,0,.45)}
 .slide[data-pos="0"]:hover .zoom{opacity:1}
 .stage-skel{position:absolute;top:2%;bottom:2%;left:20%;width:60%;border-radius:32px;background:linear-gradient(110deg,var(--bg-3) 30%,var(--card) 50%,var(--bg-3) 70%);background-size:200% 100%;animation:sk 1.2s linear infinite;border:3px solid var(--line)}
 .stage-skel[hidden]{display:none}
-.dot-b.wide,.dot-b.wide.active{width:min(260px,70vw)}
 #lightbox{position:fixed;inset:0;z-index:350;background:rgba(0,0,0,.88);display:grid;place-items:center;padding:3.5rem 1rem 3rem;backdrop-filter:blur(6px);animation:fade .25s}
 #lightbox[hidden]{display:none}
 @keyframes fade{from{opacity:0}}
@@ -278,11 +268,27 @@ header.nav.scrolled{box-shadow:0 10px 30px -18px rgba(0,0,0,.45)}
 .arrow:hover{background:var(--orange);color:#fff;transform:translateY(-50%) scale(1.1)}
 .arrow svg{width:20px;height:20px}
 .arrow.prev{left:-4px}.arrow.next{right:-4px}
-.dots{display:flex;justify-content:center;gap:.5rem;margin:.9rem 0 1.2rem;flex-wrap:wrap}
-.dot-b{width:12px;height:12px;border-radius:99px;background:var(--line);border:2px solid var(--muted);opacity:.7;position:relative;overflow:hidden;transition:width .4s var(--ease),opacity .3s,border-color .3s;padding:0}
-.dot-b.active{width:44px;opacity:1;border-color:var(--orange)}
-.dot-b.active::after{content:"";position:absolute;inset:0;background:var(--orange);transform-origin:left;animation:fill var(--dur,4s) linear forwards}
-.showcase.paused .dot-b.active::after{animation-play-state:paused}
+.dots{display:flex;justify-content:center;gap:.35rem;margin:.9rem 0 1.2rem;flex-wrap:wrap}
+.dot-b{width:22px;height:22px;border-radius:50%;padding:0;position:relative;background:transparent;border:0;display:grid;place-items:center;cursor:pointer;transition:transform .3s var(--ease)}
+.dot-b::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--muted);opacity:.55;transition:all .3s var(--ease)}
+.dot-b:hover::before{opacity:1}
+.dot-b svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);pointer-events:none}
+.dot-b .tr{fill:none;stroke:var(--muted);stroke-width:2;opacity:.3}
+.dot-b .pg{fill:none;stroke:var(--orange);stroke-width:2.6;stroke-linecap:round;stroke-dasharray:56.55;stroke-dashoffset:56.55;opacity:0}
+.dot-b.active{transform:scale(1.2)}
+.dot-b.active::before{background:var(--orange);opacity:1}
+.dot-b.active .pg{opacity:1;animation:dotring var(--dur,4s) linear forwards}
+.showcase.paused .dot-b.active .pg{animation-play-state:paused}
+@keyframes dotring{to{stroke-dashoffset:0}}
+.dot-b.pending{opacity:.5;cursor:default}
+.dot-b.pending::before{animation:dotpulse 1s ease-in-out infinite alternate}
+@keyframes dotpulse{to{opacity:.15;transform:scale(.7)}}
+/* more than 24 photos: one progress bar instead of circles */
+.dot-b.wide{width:min(260px,70vw);height:12px;border-radius:99px;border:2px solid var(--orange);overflow:hidden;background:var(--line);cursor:default}
+.dot-b.wide::before{width:100%;height:100%;border-radius:0;background:var(--orange);opacity:1;transform-origin:left;transform:scaleX(0)}
+.dot-b.wide.active{transform:none}
+.dot-b.wide.active::before{animation:fill var(--dur,4s) linear forwards}
+.showcase.paused .dot-b.wide.active::before{animation-play-state:paused}
 @keyframes fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 .folios{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
 .folio{display:flex;align-items:center;gap:.8rem;padding:.9rem 1rem;border-radius:20px;background:var(--card);border:1.5px solid var(--line);box-shadow:var(--card-shadow);transition:transform .3s var(--ease),border-color .3s}
@@ -1220,7 +1226,7 @@ setInterval(()=>{ if(!document.hidden){ loadAnnouncements(false); loadReviews(tr
 /* ═══════════════ PHOTO SLIDESHOW ═══════════════
    • photos start loading in <head> (see PHOTO PRE-LOADER) and the first slide shows the moment it is ready
    • the other photos join the slideshow one by one as they finish loading – nothing waits for them
-   • the list from the last visit is remembered, so on a return visit sliding starts instantly
+   • the photo list is remembered, and on a first visit the known file names are used at once, so sliding starts instantly
    • timing: every slide gets exactly slideSeconds; hovering / touching / tab hidden / scrolled away pauses
      and later CONTINUES with the remaining time (it never restarts a half-shown slide)
    • any number of photos: new files in the image folder appear by themselves, deleted ones disappear */
@@ -1240,6 +1246,7 @@ setInterval(()=>{ if(!document.hidden){ loadAnnouncements(false); loadReviews(tr
   const skel = document.createElement('div'); skel.className='stage-skel'; stage.insertBefore(skel, counter);
 
   let items = [];                 // { name, order, src, el, ph }
+  let wanted = [];                // every photo name in the folder, known BEFORE the photos have loaded (drives the circles)
   let cur = 0, timer = null, remaining = DUR, startedAt = 0, usingPlaceholders = false;
   const pausers = new Set(), pending = new Set();
 
@@ -1251,38 +1258,56 @@ setInterval(()=>{ if(!document.hidden){ loadAnnouncements(false); loadReviews(tr
       it.el.dataset.pos = d===0 ? '0' : (Math.abs(d)===1 && n>1) ? String(d) : 'h';
       it.el.setAttribute('aria-hidden', d===0 ? 'false':'true');
     });
-    counter.textContent = n ? pad(cur+1)+' / '+pad(n) : '';
+    const list = names(), curName = items[cur] && items[cur].name, ci = list.indexOf(curName);
+    counter.textContent = n && ci>=0 ? pad(ci+1)+' / '+pad(list.length) : '';
     counter.style.display = n ? '' : 'none';
     const bars = $$('.dot-b', dotsBox);
-    bars.forEach((b,i)=>{
-      const on = bars.length===1 || i===cur;
+    bars.forEach(b=>{
+      const on = bars.length===1 ? !!curName : b.dataset.name===curName;
       const was = b.classList.contains('active');
+      if(on) b.setAttribute('aria-current','true'); else b.removeAttribute('aria-current');
       if(on && (restartBar || !was)){ b.classList.remove('active'); void b.offsetWidth; b.classList.add('active'); }
       else if(!on) b.classList.remove('active');
     });
   }
+  const names = () => usingPlaceholders ? items.map(i=>i.name) : wanted;
   function renderDots(){
-    const n = items.length;
+    const list = names(), loaded = new Set(items.map(i=>i.name));
     dotsBox.innerHTML = '';
-    const showNav = n > 1;
-    prevB.style.display = nextB.style.display = dotsBox.style.display = showNav ? '' : 'none';
-    if(!showNav) return;
-    if(n > 10){                                     // many photos: one progress bar instead of dots
-      const b = document.createElement('div'); b.className='dot-b wide'; dotsBox.appendChild(b); return;
+    prevB.style.display = nextB.style.display = items.length > 1 ? '' : 'none';
+    dotsBox.style.display = list.length > 1 ? '' : 'none';
+    if(list.length < 2) return;
+    if(list.length > 24){                           // very many photos: one progress bar instead of circles
+      const b = document.createElement('div'); b.className='dot-b wide'; b.dataset.name = '*'; dotsBox.appendChild(b); return;
     }
-    items.forEach((_,i)=>{ const b=document.createElement('button'); b.className='dot-b'; b.type='button'; b.setAttribute('aria-label','Go to photo '+(i+1)); b.addEventListener('click',()=>goTo(i)); dotsBox.appendChild(b); });
+    list.forEach((nm,i)=>{
+      const b = document.createElement('button'); b.type = 'button'; b.dataset.name = nm;
+      b.className = 'dot-b' + (loaded.has(nm) ? '' : ' pending'); b.disabled = !loaded.has(nm);
+      b.setAttribute('aria-label','Go to photo '+(i+1)+' of '+list.length);
+      b.innerHTML = '<svg viewBox="0 0 22 22" aria-hidden="true"><circle class="tr" cx="11" cy="11" r="9"/><circle class="pg" cx="11" cy="11" r="9"/></svg>';
+      b.addEventListener('click',()=>{ const k = items.findIndex(x=>x.name===nm); if(k>=0) goTo(k); });
+      dotsBox.appendChild(b);
+    });
+  }
+  /* a photo finished loading: its circle wakes up WITHOUT touching the circle that is counting right now */
+  function markReady(name){
+    const b = $$('.dot-b', dotsBox).find(x=>x.dataset.name===name);
+    if(b){ b.classList.remove('pending'); b.disabled = false; } else renderDots();
   }
 
   /* ───── timer with pause / resume that keeps the remaining time ───── */
   function stopTimer(){ clearTimeout(timer); timer = null; }
+  /* startedAt = when the current slide (or its remaining time) started counting – even while only ONE photo is
+     loaded – so the circle and the real timer always agree, and a late second photo never delays the first change */
+  function settle(){ const now = performance.now(); remaining = Math.max(250, remaining - (now - startedAt)); startedAt = now; }
   function runTimer(){
     stopTimer();
-    if(items.length < 2 || pausers.size) return;
     startedAt = performance.now();
+    if(items.length < 2 || pausers.size) return;
     timer = setTimeout(()=>{ timer = null; goTo(cur+1); }, remaining);
   }
   function pause(reason){
-    if(!pausers.size && timer){ remaining = Math.max(400, remaining - (performance.now()-startedAt)); stopTimer(); }
+    if(!pausers.size){ settle(); stopTimer(); }
     pausers.add(reason); box.classList.add('paused');
   }
   function resume(reason){
@@ -1313,12 +1338,13 @@ setInterval(()=>{ if(!document.hidden){ loadAnnouncements(false); loadReviews(tr
     cur = curEl ? items.findIndex(x=>x.el===curEl) : 0;
     skel.hidden = true;
     items.forEach((x,i)=>x.el.setAttribute('aria-label','Photo '+(i+1)+' of '+items.length));
-    renderDots(); layout(true);
-    if(!timer) runTimer();
+    markReady(it.name); layout(false);
+    if(items.length === 1){ remaining = DUR; runTimer(); }                    // the first photo starts its own count at once
+    else if(!timer && !pausers.size){ settle(); runTimer(); }                  // 2nd photo arrives: continue the first one's remaining time
   }
   function remove(it){
     const curEl = items[cur] && items[cur].el, idx = items.indexOf(it);
-    it.el.remove(); items.splice(idx,1);
+    it.el.remove(); items.splice(idx,1); wanted = wanted.filter(n=>n!==it.name);
     if(!items.length){ cur = 0; stopTimer(); renderDots(); layout(true); return; }
     cur = it.el===curEl ? Math.min(idx, items.length-1) : items.findIndex(x=>x.el===curEl);
     renderDots(); layout(true); remaining = DUR; runTimer();
@@ -1337,6 +1363,8 @@ setInterval(()=>{ if(!document.hidden){ loadAnnouncements(false); loadReviews(tr
     list = list.filter(f => IMG_RE.test(f.name) && !skipSet.includes(f.name.toLowerCase()));
     if(!list.length) return;
     const want = new Map(list.map((f,i)=>[f.name, i]));
+    const newWanted = list.map(f=>f.name);
+    if(!usingPlaceholders && newWanted.join('|') !== wanted.join('|')){ wanted = newWanted; renderDots(); layout(false); }   // the NUMBER of photos shows at once
     items.filter(it=>!it.ph && !want.has(it.name)).forEach(remove);          // photos deleted from the folder
     const curEl = items[cur] && items[cur].el;
     items.forEach(it=>{ if(want.has(it.name)) it.order = want.get(it.name); });
@@ -1346,7 +1374,8 @@ setInterval(()=>{ if(!document.hidden){ loadAnnouncements(false); loadReviews(tr
       pending.add(f.name);
       const src = await loadPhoto(f);                                        // each photo joins as soon as it is ready
       pending.delete(f.name);
-      if(src && !items.some(i=>i.name===f.name)){ if(usingPlaceholders) removePlaceholders(); insert({ name:f.name, order:want.get(f.name), src }); }
+      if(!src){ wanted = wanted.filter(n=>n!==f.name); renderDots(); layout(false); }          // a file that cannot load gives up its circle
+      if(src && wanted.includes(f.name) && !items.some(i=>i.name===f.name)){ if(usingPlaceholders) removePlaceholders(); /* (a newer list may have dropped it meanwhile) */ insert({ name:f.name, order:want.get(f.name), src }); }
     }));
   }
 
@@ -1358,26 +1387,26 @@ setInterval(()=>{ if(!document.hidden){ loadAnnouncements(false); loadReviews(tr
   ];
   function showPlaceholders(){ usingPlaceholders = true; PLACEHOLDERS.forEach((p,i)=>insert({ ...p, name:'ph'+i, order:i, ph:true })); }
 
-  async function fallbackNames(){
-    try{                                           // servers that show a folder listing
+  async function listingNames(){                   // servers that show a folder listing (last resort)
+    try{
       const r = await fetch(folder,{cache:'no-store'});
       if(r.ok && (r.headers.get('content-type')||'').includes('text/html')){
         const html = await r.text();
-        const names = [...new Set([...html.matchAll(/href=["']([^"'?#]+)["']/gi)].map(m=>decodeURIComponent(m[1])).filter(h=>IMG_RE.test(h)).map(h=>h.split('/').pop()))];
-        if(names.length) return names;
+        return [...new Set([...html.matchAll(/href=["']([^"'?#]+)["']/gi)].map(m=>decodeURIComponent(m[1])).filter(h=>IMG_RE.test(h)).map(h=>h.split('/').pop()))];
       }
     }catch(e){}
-    return S.images.slice();
+    return [];
   }
 
-  /* ───── start: instantly from the remembered list, then confirm with the fresh one ───── */
+  /* ───── start: show photos AT ONCE (remembered list, or the known names), then confirm with GitHub's list ───── */
   (async function start(){
-    let shownFromCache = false;
-    if(P && P.cached && P.cached.length){ shownFromCache = true; sync(P.cached); }
+    const seed = (P && P.cached && P.cached.length) ? P.cached : S.images.map(n=>({name:n,url:null}));
+    const seeding = sync(seed);                    // photos begin appearing immediately, without waiting for GitHub
     const fresh = P ? await P.fresh : [];
-    if(fresh && fresh.length) await sync(fresh);
-    else if(!shownFromCache) await sync((await fallbackNames()).map(n=>({name:n,url:null})));
-    if(!items.length) setTimeout(()=>{ if(!items.length) { skel.hidden = true; showPlaceholders(); } }, shownFromCache ? 2500 : 0);
+    if(fresh && fresh.length) await sync(fresh);   // adds new photos, removes deleted ones
+    await seeding;
+    if(!items.length){ const names = await listingNames(); if(names.length) await sync(names.map(n=>({name:n,url:null}))); }
+    if(!items.length){ skel.hidden = true; showPlaceholders(); }
   })();
   window.__refreshPhotos = async () => { if(!P) return; const l = await P.refresh(); if(l && l.length) sync(l); };
 
